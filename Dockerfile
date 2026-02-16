@@ -32,5 +32,21 @@ RUN mkdir -p output/results output/screenshots output/conversations
 ENV PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
 ENV DISPLAY=:99
 
-ENTRYPOINT ["python", "cli.py"]
-CMD ["--help"]
+# Default: run family_with_kids headless
+# Override via env vars in Railway:
+#   PERSONA_ID=budget_backpacker (single persona)
+#   RUN_MODE=batch  PERSONA_ID=family_with_kids,business_traveler (batch)
+#   RUN_MODE=batch  (no PERSONA_ID = all personas)
+ENV RUN_MODE=single
+ENV PERSONA_ID=family_with_kids
+
+CMD ["sh", "-c", "\
+  if [ \"$RUN_MODE\" = 'batch' ]; then \
+    if [ -n \"$PERSONA_ID\" ]; then \
+      python cli.py batch --personas $PERSONA_ID --headless; \
+    else \
+      python cli.py batch --headless; \
+    fi; \
+  else \
+    python cli.py run $PERSONA_ID --headless; \
+  fi"]
