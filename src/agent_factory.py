@@ -29,6 +29,7 @@ EXTEND_SYSTEM_MSG_EN = (
 def create_llm(settings: Settings) -> ChatAzureOpenAI:
     """Create an Azure OpenAI LLM instance for browser-use."""
     return ChatAzureOpenAI(
+        model=settings.azure_openai_deployment,
         azure_endpoint=settings.azure_openai_endpoint,
         api_key=settings.azure_openai_api_key,
         azure_deployment=settings.azure_openai_deployment,
