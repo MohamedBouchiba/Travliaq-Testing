@@ -46,6 +46,12 @@ LIEN D'ENVOI DE LOGS (en bas du chat):
 - À LA FIN de ta conversation (dernière action), tu DOIS cliquer sur ce lien.
 - Une popup va s'ouvrir. Écris un court résumé de ton expérience dans le champ de texte de la popup, puis envoie-le.
 
+ERREURS DE CARTE (IGNORER):
+- Le panneau droit (carte) peut afficher une erreur WebGL ou être complètement vide. C'est NORMAL.
+- IGNORE complètement la carte et toute erreur visuelle sur le panneau droit.
+- NE CLIQUE JAMAIS sur la carte, ses messages d'erreur, ou ses boutons de rechargement.
+- Concentre-toi UNIQUEMENT sur le panneau de chat à GAUCHE.
+
 RÈGLES IMPORTANTES:
 - Quand un widget apparaît, INTERAGIS AVEC LUI en cliquant sur ses éléments. Ne tape PAS par-dessus.
 - Attends toujours que l'indicateur de frappe disparaisse avant d'envoyer ton prochain message.
@@ -87,6 +93,12 @@ LOG SUBMISSION LINK (bottom of chat):
 - This link appears after 3 messages have been sent.
 - As your FINAL action in the conversation, you MUST click this link.
 - A popup will open. Write a short summary of your experience in the popup's text field, then submit it.
+
+MAP ERRORS (IGNORE):
+- The right panel (map) may display a WebGL error or be completely blank. This is NORMAL.
+- IGNORE the map entirely and any visual errors on the right panel.
+- NEVER click on the map, its error messages, or its reload buttons.
+- Focus ONLY on the chat panel on the LEFT.
 
 IMPORTANT RULES:
 - When a widget appears, INTERACT WITH IT by clicking its elements. Do NOT type over it.

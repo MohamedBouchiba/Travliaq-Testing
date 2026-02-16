@@ -42,6 +42,13 @@ def create_browser(yaml_config: dict) -> Browser:
     browser_cfg = yaml_config["browser"]
     profile = BrowserProfile(
         headless=browser_cfg.get("headless", False),
+        chromium_sandbox=False,
+        args=[
+            "--disable-gpu",
+            "--disable-webgl",
+            "--disable-webgl2",
+            "--disable-software-rasterizer",
+        ],
         window_size={
             "width": browser_cfg.get("window_width", 1440),
             "height": browser_cfg.get("window_height", 900),
