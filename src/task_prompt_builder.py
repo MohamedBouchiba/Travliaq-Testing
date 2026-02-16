@@ -40,6 +40,12 @@ WIDGETS INTERACTIFS (apparaissent dans les messages de l'assistant):
 - CONFIRMATION D'AÉROPORT (airportConfirmation) : Des boutons avec les aéroports. Clique pour confirmer.
 - Après confirmation, le widget se replie avec un bouton "Modifier" si tu veux changer.
 
+LIEN D'ENVOI DE LOGS (en bas du chat):
+- Tout en bas du chat, sous le champ de texte, il y a un lien "Cliquez ici pour nous aider".
+- Ce lien apparaît après 3 messages envoyés.
+- À LA FIN de ta conversation (dernière action), tu DOIS cliquer sur ce lien.
+- Une popup va s'ouvrir. Écris un court résumé de ton expérience dans le champ de texte de la popup, puis envoie-le.
+
 RÈGLES IMPORTANTES:
 - Quand un widget apparaît, INTERAGIS AVEC LUI en cliquant sur ses éléments. Ne tape PAS par-dessus.
 - Attends toujours que l'indicateur de frappe disparaisse avant d'envoyer ton prochain message.
@@ -75,6 +81,12 @@ INTERACTIVE WIDGETS (appear within assistant messages):
 - CITY SELECTOR (citySelector): A list of cities. Click your city.
 - AIRPORT CONFIRMATION (airportConfirmation): Airport buttons. Click to confirm.
 - After confirming, widgets collapse with a "Modify" / "Modifier" button.
+
+LOG SUBMISSION LINK (bottom of chat):
+- At the very bottom of the chat, below the text input, there is a link "Cliquez ici pour nous aider".
+- This link appears after 3 messages have been sent.
+- As your FINAL action in the conversation, you MUST click this link.
+- A popup will open. Write a short summary of your experience in the popup's text field, then submit it.
 
 IMPORTANT RULES:
 - When a widget appears, INTERACT WITH IT by clicking its elements. Do NOT type over it.
@@ -218,9 +230,14 @@ RÈGLES DE RYTHME:
 - Si l'assistant demande quelque chose, réponds dans ton personnage.
 - Essaie d'atteindre la phase finale, mais ne force pas si le chatbot va dans une autre direction.
 
-À LA FIN:
-Quand tu as terminé toutes les phases (ou après avoir atteint la limite de pas),
-extrais un résumé de ce qui s'est passé pendant la conversation.
+À LA FIN (OBLIGATOIRE):
+1. Quand tu as terminé toutes les phases (ou après avoir atteint la limite de pas),
+   cherche le lien "Cliquez ici pour nous aider" tout en bas du chat.
+2. Clique dessus. Une popup s'ouvre.
+3. Dans la popup, écris un résumé de ton expérience en tant que {persona_name}:
+   ce qui t'a plu, ce qui t'a frustré, et une note sur 10 de l'expérience globale.
+4. Envoie le formulaire.
+5. Ensuite, extrais un résumé de ce qui s'est passé pendant la conversation.
 """
     else:
         footer = """
@@ -231,11 +248,16 @@ PACING RULES:
 - If the assistant asks something, answer in character.
 - Try to reach the final phase, but don't force it if the chatbot goes in another direction.
 
-AT THE END:
-When you have completed all phases (or reached the step limit),
-extract a summary of what happened during the conversation.
+AT THE END (MANDATORY):
+1. When you have completed all phases (or reached the step limit),
+   look for the link "Cliquez ici pour nous aider" at the very bottom of the chat.
+2. Click it. A popup will open.
+3. In the popup, write a summary of your experience as {persona_name}:
+   what you liked, what frustrated you, and an overall rating out of 10.
+4. Submit the form.
+5. Then extract a summary of what happened during the conversation.
 """
-    return header + "".join(phases) + footer
+    return header + "".join(phases) + footer.format(persona_name=persona.name)
 
 
 # ---------------------------------------------------------------------------
