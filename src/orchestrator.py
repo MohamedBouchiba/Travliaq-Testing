@@ -153,12 +153,12 @@ async def run_single_persona(
         result.duration_seconds = (result.finished_at - started_at).total_seconds()
         logger.info(f"[{persona.id}]   Duration: {result.duration_seconds:.1f}s")
 
-        if browser:
+        if agent:
             try:
-                await browser.close()
-                logger.info(f"[{persona.id}]   Browser closed OK")
+                await agent.close()
+                logger.info(f"[{persona.id}]   Agent + browser closed OK")
             except Exception as e:
-                logger.warning(f"[{persona.id}]   Browser close error: {e}")
+                logger.warning(f"[{persona.id}]   Agent close error: {e}")
 
     # --- Step 4: Evaluate ---
     if result.status == RunStatus.COMPLETED:

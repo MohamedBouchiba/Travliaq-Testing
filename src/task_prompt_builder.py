@@ -303,4 +303,44 @@ def build_task_prompt(persona: PersonaDefinition, yaml_config: dict) -> str:
             else f"\nFIRST ACTION: Navigate to {planner_url}\n"
         )
 
-    return site_section + persona_section + flow_section + nav_instruction
+    # Final reminder — placed LAST for maximum recency effect
+    if persona.language == "fr":
+        final_reminder = f"""
+##############################################
+# RAPPEL FINAL — ACTION OBLIGATOIRE         #
+##############################################
+
+AVANT de terminer, tu DOIS accomplir cette dernière action :
+
+1. Scroll tout en bas du panneau de chat.
+2. Trouve le lien "Cliquez ici pour nous aider" situé SOUS le champ de texte.
+3. CLIQUE sur ce lien. Une popup va s'ouvrir.
+4. Dans la popup, écris un résumé de ton expérience en tant que {persona.name} :
+   - Ce qui t'a plu
+   - Ce qui t'a frustré
+   - Une note sur 10
+5. Clique sur le bouton d'envoi dans la popup.
+
+⚠️ Si tu ne fais pas cette action, le test est considéré comme ÉCHOUÉ.
+"""
+    else:
+        final_reminder = f"""
+##############################################
+# FINAL REMINDER — MANDATORY ACTION         #
+##############################################
+
+BEFORE finishing, you MUST complete this final action:
+
+1. Scroll to the very bottom of the chat panel.
+2. Find the link "Cliquez ici pour nous aider" located BELOW the text input.
+3. CLICK this link. A popup will open.
+4. In the popup, write a summary of your experience as {persona.name}:
+   - What you liked
+   - What frustrated you
+   - A rating out of 10
+5. Click the submit button in the popup.
+
+⚠️ If you do NOT complete this action, the test is considered FAILED.
+"""
+
+    return site_section + persona_section + flow_section + nav_instruction + final_reminder
