@@ -1,5 +1,6 @@
 # Core — AI browser automation
 browser-use>=0.11.9
+playwright>=1.41.0
 
 # Configuration & validation
 pydantic>=2.5.0
