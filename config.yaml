@@ -1,0 +1,25 @@
+target:
+  base_url: "https://travliaq.com"
+  planner_url: "https://travliaq.com/planner"
+  planner_url_clean: "https://travliaq.com/planner?noTour=1"
+
+browser:
+  headless: false
+  window_width: 1440
+  window_height: 900
+  minimum_wait_page_load_time: 2
+  maximum_wait_page_load_time: 15
+
+agent:
+  max_steps: 60
+  max_actions_per_step: 3
+  max_failures: 5
+  retry_delay: 5
+  use_vision: true
+  step_timeout: 180
+
+evaluation:
+  temperature: 0.3
+
+orchestration:
+  timeout_per_persona_seconds: 600

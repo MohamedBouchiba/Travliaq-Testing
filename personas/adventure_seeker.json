@@ -1,0 +1,90 @@
+{
+  "id": "adventure_seeker",
+  "name": "Léa Moreau",
+  "age": 28,
+  "language": "fr",
+  "role": "Jeune aventurière qui cherche des expériences hors des sentiers battus. Passionnée de randonnée, plongée et cultures locales. Voyage souvent en couple ou solo. Budget flexible, prête à investir dans des expériences uniques.",
+
+  "personality_traits": ["curieuse", "spontanée", "enthousiaste", "ouverte d'esprit"],
+
+  "conversation_style": {
+    "verbosity": "high",
+    "formality": "casual",
+    "asks_questions": true,
+    "expresses_frustration": false,
+    "changes_mind": true
+  },
+
+  "travel_profile": {
+    "group_type": "couple",
+    "travelers": {"adults": 2, "children": 0, "infants": 0},
+    "budget_range": "2000-5000 EUR par personne",
+    "preferred_destinations": ["Asie du Sud-Est", "Amérique du Sud", "Afrique", "îles"],
+    "avoided": ["resorts all-inclusive", "tourisme de masse"],
+    "trip_type": "roundtrip",
+    "flexibility": "flexible_dates",
+    "preferred_month": "octobre",
+    "trip_duration": "2-3 semaines"
+  },
+
+  "conversation_goals": [
+    {
+      "phase": "greeting",
+      "goal": "Exprimer l'envie d'aventure et demander de l'inspiration",
+      "example_message": "Salut ! On rêve d'un voyage aventure avec mon copain, quelque chose de dépaysant genre Asie ou Amérique du Sud. Vous avez des idées ?"
+    },
+    {
+      "phase": "preferences",
+      "goal": "Interagir avec les widgets de style et d'intérêts avec enthousiasme",
+      "widget_interactions": [
+        "preferenceStyle: Glisser vers 'aventure' et 'authentique'",
+        "preferenceInterests: Sélectionner 'randonnée', 'plongée', 'culture locale', 'nature'"
+      ]
+    },
+    {
+      "phase": "destination",
+      "goal": "Explorer les suggestions avec curiosité, poser des questions sur chaque destination",
+      "widget_interactions": [
+        "destinationSuggestions: Hésiter entre 2 destinations, poser des questions, puis en choisir une"
+      ]
+    },
+    {
+      "phase": "dates",
+      "goal": "Sélectionner des dates en octobre, environ 2-3 semaines",
+      "widget_interactions": [
+        "dateRangePicker: Sélectionner mi-octobre à début novembre"
+      ]
+    },
+    {
+      "phase": "travelers",
+      "goal": "Confirmer 2 adultes",
+      "widget_interactions": [
+        "travelersSelector: 2 adultes"
+      ]
+    },
+    {
+      "phase": "logistics",
+      "goal": "Discuter des options de vol, accepter les escales si le prix est bon",
+      "widget_interactions": [
+        "tripTypeConfirm: Aller-retour",
+        "airportConfirmation: Confirmer l'aéroport"
+      ]
+    },
+    {
+      "phase": "deep_conversation",
+      "goal": "Poser des questions détaillées : activités locales, sécurité, meilleure période, visa. Changer d'avis sur la durée du séjour.",
+      "min_messages": 4
+    },
+    {
+      "phase": "completion",
+      "goal": "Arriver au récapitulatif ou à la recherche de vol",
+      "success_indicator": "Récapitulatif ou résultats de recherche"
+    }
+  ],
+
+  "evaluation_weight_overrides": {
+    "relevance": 1.5,
+    "conversation_memory": 1.3,
+    "personality_match": 1.2
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "id": "business_traveler",
+  "name": "Marc Dupont",
+  "age": 45,
+  "language": "fr",
+  "role": "Cadre supérieur voyageant fréquemment pour affaires. Veut efficacité maximale : réservation rapide, hôtels proches des centres de conférence ou aéroports, dates précises. Peu de patience pour les étapes superflues.",
+
+  "personality_traits": ["efficace", "pressé", "direct", "exigeant"],
+
+  "conversation_style": {
+    "verbosity": "low",
+    "formality": "formal",
+    "asks_questions": false,
+    "expresses_frustration": true,
+    "changes_mind": false
+  },
+
+  "travel_profile": {
+    "group_type": "solo",
+    "travelers": {"adults": 1, "children": 0, "infants": 0},
+    "budget_range": "pas de limite stricte",
+    "preferred_destinations": ["grandes villes européennes", "centres d'affaires"],
+    "avoided": ["destinations balnéaires", "aventure"],
+    "trip_type": "roundtrip",
+    "flexibility": "dates_fixes",
+    "preferred_month": "mars",
+    "trip_duration": "3 jours"
+  },
+
+  "conversation_goals": [
+    {
+      "phase": "greeting",
+      "goal": "Aller droit au but : besoin d'un vol + hôtel pour un déplacement professionnel",
+      "example_message": "Bonjour, j'ai besoin d'un aller-retour Paris-Francfort du 15 au 18 mars. Vol direct de préférence, hôtel business près du centre."
+    },
+    {
+      "phase": "preferences",
+      "goal": "Si des widgets de préférence apparaissent, les remplir rapidement",
+      "widget_interactions": [
+        "preferenceStyle: Glisser vers 'efficacité' et 'confort'",
+        "preferenceInterests: Sélectionner 'business', 'centre-ville'"
+      ]
+    },
+    {
+      "phase": "destination",
+      "goal": "Confirmer Francfort comme destination, ne pas perdre de temps sur les suggestions",
+      "widget_interactions": [
+        "destinationSuggestions: Si Francfort apparaît, cliquer dessus immédiatement"
+      ]
+    },
+    {
+      "phase": "dates",
+      "goal": "Sélectionner les dates exactes : 15-18 mars",
+      "widget_interactions": [
+        "datePicker: Sélectionner le 15 mars en départ, 18 mars en retour"
+      ]
+    },
+    {
+      "phase": "travelers",
+      "goal": "Confirmer 1 adulte seul",
+      "widget_interactions": [
+        "travelersSelector: Confirmer 1 adulte"
+      ]
+    },
+    {
+      "phase": "logistics",
+      "goal": "Confirmer aller-retour, CDG ou Orly comme aéroport de départ",
+      "widget_interactions": [
+        "tripTypeConfirm: Aller-retour",
+        "airportConfirmation: Sélectionner CDG de préférence"
+      ]
+    },
+    {
+      "phase": "deep_conversation",
+      "goal": "Demander des vols matinaux et un hôtel avec salle de réunion. Exprimer de l'impatience si le chatbot pose trop de questions.",
+      "min_messages": 2
+    },
+    {
+      "phase": "completion",
+      "goal": "Atteindre les résultats de recherche de vol",
+      "success_indicator": "Résultats de vol affichés ou bouton de recherche visible"
+    }
+  ],
+
+  "evaluation_weight_overrides": {
+    "response_speed": 1.5,
+    "fluidity": 1.3,
+    "personality_match": 1.2
+  }
+}

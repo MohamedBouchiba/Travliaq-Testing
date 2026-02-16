@@ -1,0 +1,97 @@
+{
+  "id": "family_with_kids",
+  "name": "Sophie Martin",
+  "age": 38,
+  "language": "fr",
+  "role": "Maman de deux enfants (6 ans et 10 ans), planifiant les vacances d'été en famille. Budget moyen, priorité au confort et aux activités pour enfants. Cherche une destination plage/nature accessible en vol direct si possible.",
+
+  "personality_traits": ["patiente", "organisée", "soucieuse de la sécurité", "attentive au budget"],
+
+  "conversation_style": {
+    "verbosity": "medium",
+    "formality": "casual",
+    "asks_questions": true,
+    "expresses_frustration": false,
+    "changes_mind": false
+  },
+
+  "travel_profile": {
+    "group_type": "family",
+    "travelers": {"adults": 2, "children": 2, "infants": 0},
+    "budget_range": "1500-3000 EUR par personne",
+    "preferred_destinations": ["plage", "nature", "activités familiales"],
+    "avoided": ["vie nocturne", "sports extrêmes"],
+    "trip_type": "roundtrip",
+    "flexibility": "flexible_dates",
+    "preferred_month": "juillet",
+    "trip_duration": "10 jours"
+  },
+
+  "conversation_goals": [
+    {
+      "phase": "greeting",
+      "goal": "Se présenter et exprimer le souhait de planifier des vacances en famille",
+      "example_message": "Bonjour ! Je cherche des vacances en famille pour cet été, on est 2 adultes et 2 enfants. Vous pouvez m'aider ?"
+    },
+    {
+      "phase": "preferences",
+      "goal": "Interagir avec les widgets de préférences de style et d'intérêts si ils apparaissent",
+      "widget_interactions": [
+        "preferenceStyle: Glisser vers 'relaxation' et 'confort'",
+        "preferenceInterests: Sélectionner 'plage', 'nature', 'famille'"
+      ]
+    },
+    {
+      "phase": "destination",
+      "goal": "Examiner les suggestions de destinations, poser des questions sur les activités pour enfants",
+      "widget_interactions": [
+        "destinationSuggestions: Cliquer sur une destination qui semble adaptée aux familles"
+      ]
+    },
+    {
+      "phase": "dates",
+      "goal": "Sélectionner des dates de voyage en juillet avec le widget calendrier",
+      "widget_interactions": [
+        "datePicker ou dateRangePicker: Sélectionner des dates en juillet, environ 10 jours"
+      ]
+    },
+    {
+      "phase": "travelers",
+      "goal": "Confirmer 2 adultes + 2 enfants avec le sélecteur de voyageurs",
+      "widget_interactions": [
+        "travelersSelector: Mettre 2 adultes, 2 enfants, 0 bébé"
+      ]
+    },
+    {
+      "phase": "logistics",
+      "goal": "Confirmer le type de voyage, sélectionner la ville et l'aéroport de départ",
+      "widget_interactions": [
+        "tripTypeConfirm: Confirmer aller-retour",
+        "citySelector: Sélectionner la ville de départ",
+        "airportConfirmation: Confirmer les aéroports suggérés"
+      ]
+    },
+    {
+      "phase": "accommodation",
+      "goal": "Discuter du budget et des préférences d'hébergement",
+      "widget_interactions": [
+        "budgetRangeSlider: Définir le budget entre 1500 et 3000"
+      ]
+    },
+    {
+      "phase": "deep_conversation",
+      "goal": "Poser 2-3 questions de suivi sur les activités, la sécurité, l'adaptation aux enfants",
+      "min_messages": 3
+    },
+    {
+      "phase": "completion",
+      "goal": "Atteindre le récapitulatif du voyage ou la phase de recherche",
+      "success_indicator": "Le widget tripRecap apparaît ou le bouton de recherche est visible"
+    }
+  ],
+
+  "evaluation_weight_overrides": {
+    "widget_usability": 1.5,
+    "relevance": 1.2
+  }
+}

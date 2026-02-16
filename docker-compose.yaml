@@ -1,0 +1,15 @@
+services:
+  travelia-testing:
+    build: .
+    env_file: .env
+    volumes:
+      - ./output:/app/output
+      - ./personas:/app/personas
+    # Override headless to true in Docker (no display)
+    environment:
+      - LOG_LEVEL=INFO
+    # Usage:
+    #   docker compose run travelia-testing run family_with_kids --headless
+    #   docker compose run travelia-testing batch --personas family_with_kids,budget_backpacker --headless
+    #   docker compose run travelia-testing list-personas
+    #   docker compose run travelia-testing preview-prompt family_with_kids
