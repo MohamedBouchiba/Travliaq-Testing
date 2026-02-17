@@ -26,7 +26,7 @@ INTERFACE DE CHAT:
 - Le bouton d'envoi a l'aria-label "Envoyer" (FR) ou "Send" (EN).
 - Après avoir tapé ton message, tu DOIS appuyer sur Entrée OU cliquer sur le bouton "Envoyer" (aria-label "Envoyer"). Ne laisse JAMAIS un message non envoyé dans le champ de texte.
 - Au-dessus du champ de texte, il y a des "Smart Suggestions" : des boutons/chips cliquables (role="toolbar").
-- Quand l'assistant réfléchit, un indicateur de frappe (3 points animés) apparaît. ATTENDS qu'il disparaisse avant d'agir.
+- Quand l'assistant réfléchit, un indicateur de frappe (3 points animés) apparaît. ATTENDS PATIEMMENT qu'il disparaisse complètement avant d'agir. Cela peut prendre 10 à 30 secondes — c'est NORMAL, ne tape rien et ne clique sur rien pendant ce temps.
 - Si un message d'erreur apparaît, clique sur le bouton "Réessayer" / "Retry".
 
 WIDGETS INTERACTIFS (apparaissent dans les messages de l'assistant):
@@ -68,7 +68,7 @@ CHAT INTERFACE:
 - The send button has aria-label "Send" (EN) or "Envoyer" (FR).
 - After typing your message, you MUST press Enter OR click the "Send" button (aria-label "Send"). NEVER leave an unsent message in the text input.
 - Above the input, there are "Smart Suggestions": clickable chip buttons (role="toolbar").
-- When the assistant is thinking, a typing indicator (3 animated dots) appears. WAIT for it to disappear before acting.
+- When the assistant is thinking, a typing indicator (3 animated dots) appears. WAIT PATIENTLY for it to fully disappear before acting. This can take 10-30 seconds — this is NORMAL, do not type or click anything during this time.
 - If an error message appears, click the "Retry" / "Réessayer" button.
 
 INTERACTIVE WIDGETS (appear within assistant messages):
@@ -224,7 +224,7 @@ def _build_flow_section(persona: PersonaDefinition) -> str:
     if persona.language == "fr":
         footer = """
 RÈGLES DE RYTHME:
-- Attends que l'indicateur de frappe (3 points) disparaisse avant d'envoyer.
+- Attends que l'indicateur de frappe (3 points) disparaisse avant d'envoyer. Sois PATIENT — la réponse peut prendre jusqu'à 30 secondes.
 - Quand un widget apparaît, interagis avec lui AVANT de taper un message.
 - Envoie des messages naturels, pas des commandes robotiques.
 - Si l'assistant demande quelque chose, réponds dans ton personnage.
@@ -233,7 +233,7 @@ RÈGLES DE RYTHME:
     else:
         footer = """
 PACING RULES:
-- Wait for the typing indicator (3 dots) to disappear before sending.
+- Wait for the typing indicator (3 dots) to disappear before sending. Be PATIENT — the response can take up to 30 seconds.
 - When a widget appears, interact with it BEFORE typing a message.
 - Send natural messages, not robotic commands.
 - If the assistant asks something, answer in character.
