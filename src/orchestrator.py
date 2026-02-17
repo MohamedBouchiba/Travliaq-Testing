@@ -242,6 +242,21 @@ async def run_single_persona(
             first_error = all_errors[0] if all_errors else ""
             model_kw = ["404", "model", "endpoint", "vision", "image input", "rate limit", "modelprovider", "json_invalid"]
             is_model_failure = any(kw in first_error.lower() for kw in model_kw)
+            is_rate_limit = "rate limit" in first_error.lower() or "429" in first_error.lower()
+
+            # If rate-limited, cool down before trying backup models
+            if is_rate_limit:
+                rl_cooldown = yaml_config.get("orchestration", {}).get(
+                    "rate_limit_cooldown_seconds", 60
+                )
+                logger.info(f"[{persona.id}]   Rate limit detected — cooling down {rl_cooldown}s before backup models...")
+                if bus:
+                    await bus.emit(DashboardEvent(
+                        type=EventType.STAGE_RUN_AGENT, persona_id=persona.id,
+                        batch_id=batch_id, stage="2/5",
+                        data={"message": f"Rate limited — waiting {rl_cooldown}s before retry"},
+                    ))
+                await asyncio.sleep(rl_cooldown)
 
             # Skip models already tried by browser-use (primary + cross-provider fallback)
             tried = {primary_model, fallback_used} - {None}
@@ -295,6 +310,20 @@ async def run_single_persona(
                     if len(history.model_actions()) == 0 and history.has_errors():
                         backup_errors = [str(e) for e in history.errors() if e]
                         logger.warning(f"[{persona.id}]   Backup {i}/{len(remaining_models)} also failed: {backup_errors[0][:150] if backup_errors else 'unknown'}")
+                        # Rate-limit cooldown before trying next backup
+                        backup_err_lower = backup_errors[0].lower() if backup_errors else ""
+                        if "rate limit" in backup_err_lower or "429" in backup_err_lower:
+                            rl_cooldown = yaml_config.get("orchestration", {}).get(
+                                "rate_limit_cooldown_seconds", 60
+                            )
+                            logger.info(f"[{persona.id}]   Rate limit on backup — cooling down {rl_cooldown}s...")
+                            if bus:
+                                await bus.emit(DashboardEvent(
+                                    type=EventType.STAGE_RUN_AGENT, persona_id=persona.id,
+                                    batch_id=batch_id, stage="2/5",
+                                    data={"message": f"Rate limited — waiting {rl_cooldown}s"},
+                                ))
+                            await asyncio.sleep(rl_cooldown)
                         continue  # try next backup
 
                     # This backup worked

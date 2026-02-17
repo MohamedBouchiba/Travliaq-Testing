@@ -23,7 +23,7 @@ def _get_provider(model_id: str) -> str:
 
 EXTEND_SYSTEM_MSG_FR = (
     "CRITIQUE: Ceci est un site français de planification de voyage. "
-    "Le champ de texte du chat a l'aria-label 'Envoyer un message...' (FR). "
+    "Le champ de texte du chat a un placeholder 'Envoyer un message...' — tape ton VRAI message, PAS le placeholder. "
     "Quand tu vois des widgets (calendriers, sliders, boutons), interagis avec eux en cliquant. "
     "Attends que l'indicateur de frappe (3 points animés) disparaisse avant d'envoyer ton message. "
     "Après avoir tapé un message, APPUIE sur Entrée ou CLIQUE sur le bouton Envoyer. Ne laisse jamais un message non envoyé. "
@@ -32,7 +32,7 @@ EXTEND_SYSTEM_MSG_FR = (
 
 EXTEND_SYSTEM_MSG_EN = (
     "CRITICAL: This is a French travel planning website. "
-    "The chat input textarea has aria-label 'Send a message...' (EN) or 'Envoyer un message...' (FR). "
+    "The chat input textarea has a placeholder 'Send a message...' — type your ACTUAL message, NOT the placeholder text. "
     "When you see widgets (date pickers, sliders, buttons), interact with them by clicking. "
     "Wait for typing indicators (3 animated dots) to finish before sending your next message. "
     "After typing a message, PRESS Enter or CLICK the Send button. Never leave an unsent message. "
@@ -150,8 +150,7 @@ def create_agent(
         fallback_llm=fallback_llm,
         browser=browser,
         max_actions_per_step=agent_cfg.get("max_actions_per_step", 3),
-        max_failures=agent_cfg.get("max_failures", 5),
-        retry_delay=agent_cfg.get("retry_delay", 5),
+        max_failures=agent_cfg.get("max_failures", 3),
         use_vision=agent_cfg.get("use_vision", True),
         save_conversation_path=str(conv_dir),
         extend_system_message=extend_msg,

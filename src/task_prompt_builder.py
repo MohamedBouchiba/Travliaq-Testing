@@ -22,7 +22,7 @@ NAVIGATION:
 - Concentre-toi UNIQUEMENT sur le panneau de chat. Ignore la carte.
 
 INTERFACE DE CHAT:
-- Le champ de texte pour écrire a l'aria-label "Envoyer un message..." (FR) ou "Send a message..." (EN).
+- Le champ de texte pour écrire a un placeholder "Envoyer un message..." — c'est le champ VIDE où tu tapes tes messages. Ne tape PAS le texte du placeholder, tape ton vrai message.
 - Le bouton d'envoi a l'aria-label "Envoyer" (FR) ou "Send" (EN).
 - Après avoir tapé ton message, tu DOIS appuyer sur Entrée OU cliquer sur le bouton "Envoyer" (aria-label "Envoyer"). Ne laisse JAMAIS un message non envoyé dans le champ de texte.
 - Au-dessus du champ de texte, il y a des "Smart Suggestions" : des boutons/chips cliquables (role="toolbar").
@@ -64,7 +64,7 @@ NAVIGATION:
 - Focus ONLY on the chat panel. Ignore the map.
 
 CHAT INTERFACE:
-- The text input has aria-label "Send a message..." (EN) or "Envoyer un message..." (FR).
+- The text input has a placeholder "Send a message..." — this is the EMPTY field where you type your messages. Do NOT type the placeholder text, type your actual message.
 - The send button has aria-label "Send" (EN) or "Envoyer" (FR).
 - After typing your message, you MUST press Enter OR click the "Send" button (aria-label "Send"). NEVER leave an unsent message in the text input.
 - Above the input, there are "Smart Suggestions": clickable chip buttons (role="toolbar").

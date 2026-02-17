@@ -13,8 +13,7 @@ browser:
 agent:
   max_steps: 100
   max_actions_per_step: 3
-  max_failures: 8
-  retry_delay: 10
+  max_failures: 3
   use_vision: true
   step_timeout: 180
 
@@ -24,6 +23,7 @@ evaluation:
 orchestration:
   timeout_per_persona_seconds: 900
   cooldown_between_personas_seconds: 30
+  rate_limit_cooldown_seconds: 60
 
 dashboard:
   port: 8099
