@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     # OpenRouter
     openrouter_api_key: str
-    openrouter_model: str = "qwen/qwen2.5-vl-72b-instruct:free"       # agent (vision)
+    openrouter_model: str = "google/gemma-3-27b-it:free"               # agent (vision)
     openrouter_backup_model: str = "nvidia/nemotron-nano-12b-v2-vl:free"  # backup agent (vision)
     openrouter_eval_model: str = "openrouter/aurora-alpha"              # evaluation (fast reasoning)
 
