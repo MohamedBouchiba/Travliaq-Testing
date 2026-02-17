@@ -6,7 +6,6 @@ import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from openai import APIStatusError, OpenAI
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -15,7 +14,7 @@ from tenacity import (
     before_sleep_log,
 )
 
-from .agent_factory import create_agent
+from .agent_factory import create_agent, create_llm_for_model
 from .config import Settings
 from .evaluator import evaluate_run
 from .events import DashboardEvent, EventType, get_event_bus
@@ -38,26 +37,53 @@ def _log_banner(persona_id: str, message: str) -> None:
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=10, min=10, max=60),
-    retry=retry_if_exception_type((APIStatusError, ConnectionError)),
+    retry=retry_if_exception_type((Exception,)),
     before_sleep=before_sleep_log(logger, logging.WARNING),
     reraise=True,
 )
 def _check_llm_health(settings: Settings) -> bool:
-    """Lightweight OpenRouter connectivity check with retry."""
-    client = OpenAI(
-        api_key=settings.openrouter_api_key,
-        base_url="https://openrouter.ai/api/v1",
-        default_headers={
-            "HTTP-Referer": "https://travliaq.com",
-            "X-Title": "Travliaq-Testing",
-        },
-    )
-    client.chat.completions.create(
-        model=settings.openrouter_eval_model,
-        messages=[{"role": "user", "content": "ping"}],
-        max_tokens=5,
-    )
-    return True
+    """Lightweight LLM connectivity check with retry.
+
+    Uses whichever primary provider is configured (Google > Groq > OpenRouter).
+    """
+    if settings.google_api_key:
+        from google import genai
+        client = genai.Client(api_key=settings.google_api_key)
+        client.models.generate_content(
+            model=settings.google_model,
+            contents="ping",
+            config={"max_output_tokens": 5},
+        )
+        return True
+
+    if settings.groq_api_key:
+        from groq import Groq
+        client = Groq(api_key=settings.groq_api_key)
+        client.chat.completions.create(
+            model=settings.groq_model,
+            messages=[{"role": "user", "content": "ping"}],
+            max_tokens=5,
+        )
+        return True
+
+    if settings.openrouter_api_key:
+        from openai import OpenAI
+        client = OpenAI(
+            api_key=settings.openrouter_api_key,
+            base_url="https://openrouter.ai/api/v1",
+            default_headers={
+                "HTTP-Referer": "https://travliaq.com",
+                "X-Title": "Travliaq-Testing",
+            },
+        )
+        client.chat.completions.create(
+            model=settings.openrouter_eval_model,
+            messages=[{"role": "user", "content": "ping"}],
+            max_tokens=5,
+        )
+        return True
+
+    raise RuntimeError("No LLM API keys configured")
 
 
 async def run_single_persona(
@@ -70,14 +96,16 @@ async def run_single_persona(
     run_id = uuid.uuid4().hex[:8]
     started_at = datetime.now(timezone.utc)
 
+    model_chain = settings.build_model_chain()
+    primary_model = model_chain[0] if model_chain else "N/A"
+
     _log_banner(persona.id, f"STARTING RUN — {persona.name} ({persona.language})")
     logger.info(f"[{persona.id}] Run ID: {persona.id}-{run_id}")
     logger.info(f"[{persona.id}] Role: {persona.role[:100]}...")
     logger.info(f"[{persona.id}] Group: {persona.travel_profile.group_type}")
     logger.info(f"[{persona.id}] Budget: {persona.travel_profile.budget_range}")
     logger.info(f"[{persona.id}] Phases planned: {[g.phase for g in persona.conversation_goals]}")
-    backup_count = len(settings.backup_models_list)
-    logger.info(f"[{persona.id}] LLM Agent: {settings.openrouter_model} | Backups: {backup_count} models | Eval: {settings.openrouter_eval_model}")
+    logger.info(f"[{persona.id}] Model chain ({len(model_chain)}): {' → '.join(model_chain[:4])}{'...' if len(model_chain) > 4 else ''}")
 
     result = TestRunResult(
         run_id=f"{persona.id}-{run_id}",
@@ -87,7 +115,7 @@ async def run_single_persona(
         persona_language=persona.language,
         started_at=started_at,
         status=RunStatus.RUNNING,
-        llm_model_used=settings.openrouter_model,
+        llm_model_used=primary_model,
         config_snapshot={
             "agent": yaml_config.get("agent", {}),
             "browser": yaml_config.get("browser", {}),
@@ -101,20 +129,20 @@ async def run_single_persona(
 
     try:
         # --- Step 0: LLM health check ---
-        logger.info(f"[{persona.id}] [0/5] Checking OpenRouter connectivity...")
+        logger.info(f"[{persona.id}] [0/5] Checking LLM connectivity...")
         if bus:
             await bus.emit(DashboardEvent(
                 type=EventType.STAGE_HEALTH_CHECK, persona_id=persona.id,
                 batch_id=batch_id, stage="0/5",
-                data={"message": "Checking OpenRouter connectivity"},
+                data={"message": "Checking LLM connectivity"},
             ))
         try:
             _check_llm_health(settings)
-            logger.info(f"[{persona.id}]   OpenRouter health check PASSED")
+            logger.info(f"[{persona.id}]   LLM health check PASSED")
         except Exception as e:
-            logger.error(f"[{persona.id}]   OpenRouter health check FAILED after retries: {e}")
+            logger.error(f"[{persona.id}]   LLM health check FAILED after retries: {e}")
             result.status = RunStatus.FAILED
-            result.error_message = f"OpenRouter health check failed: {e}"
+            result.error_message = f"LLM health check failed: {e}"
             if bus:
                 await bus.emit(DashboardEvent(
                     type=EventType.PERSONA_FAILED, persona_id=persona.id,
@@ -190,7 +218,7 @@ async def run_single_persona(
                         ))
 
         agent, browser = create_agent(persona, settings, yaml_config, step_callback=_on_step)
-        logger.info(f"[{persona.id}]   Agent created OK (model: {settings.openrouter_model})")
+        logger.info(f"[{persona.id}]   Agent created OK (primary: {primary_model})")
 
         # --- Step 2: Run agent ---
         logger.info(f"[{persona.id}] [2/5] Running agent (max_steps={max_steps}, timeout={timeout}s)...")
@@ -212,18 +240,19 @@ async def run_single_persona(
         if len(history.model_actions()) == 0 and history.has_errors():
             all_errors = [str(e) for e in history.errors() if e]
             first_error = all_errors[0] if all_errors else ""
-            model_kw = ["404", "model", "endpoint", "vision", "image input", "rate limit", "modelprovider"]
+            model_kw = ["404", "model", "endpoint", "vision", "image input", "rate limit", "modelprovider", "json_invalid"]
             is_model_failure = any(kw in first_error.lower() for kw in model_kw)
 
-            backup_models = settings.backup_models_list
-            if is_model_failure and backup_models:
-                logger.warning(f"[{persona.id}]   Primary model returned 0 actions ({len(all_errors)} errors)")
+            # Skip the first 2 models in chain (primary + fallback_llm already tried by browser-use)
+            remaining_models = model_chain[2:]
+            if is_model_failure and remaining_models:
+                logger.warning(f"[{persona.id}]   Primary + fallback returned 0 actions ({len(all_errors)} errors)")
                 logger.warning(f"[{persona.id}]   First error: {first_error[:200]}")
-                logger.info(f"[{persona.id}]   {len(backup_models)} backup model(s) available — starting fallback chain")
+                logger.info(f"[{persona.id}]   {len(remaining_models)} backup model(s) available — starting fallback chain")
 
                 fallback_succeeded = False
-                for i, backup_model in enumerate(backup_models, 1):
-                    logger.info(f"[{persona.id}]   Trying backup model {i}/{len(backup_models)}: {backup_model}")
+                for i, backup_model in enumerate(remaining_models, 1):
+                    logger.info(f"[{persona.id}]   Trying backup model {i}/{len(remaining_models)}: {backup_model}")
 
                     # Close previous agent/browser
                     if agent:
@@ -244,7 +273,7 @@ async def run_single_persona(
                             batch_id=batch_id, stage="2/5",
                             data={
                                 "max_steps": max_steps, "timeout": timeout,
-                                "message": f"Fallback {i}/{len(backup_models)}: {backup_model}",
+                                "message": f"Fallback {i}/{len(remaining_models)}: {backup_model}",
                                 "fallback": True, "fallback_index": i,
                             },
                         ))
@@ -264,7 +293,7 @@ async def run_single_persona(
                     # Check if this backup also failed completely
                     if len(history.model_actions()) == 0 and history.has_errors():
                         backup_errors = [str(e) for e in history.errors() if e]
-                        logger.warning(f"[{persona.id}]   Backup {i}/{len(backup_models)} also failed: {backup_errors[0][:150] if backup_errors else 'unknown'}")
+                        logger.warning(f"[{persona.id}]   Backup {i}/{len(remaining_models)} also failed: {backup_errors[0][:150] if backup_errors else 'unknown'}")
                         continue  # try next backup
 
                     # This backup worked
@@ -274,7 +303,7 @@ async def run_single_persona(
 
                 if not fallback_succeeded:
                     result.status = RunStatus.FAILED
-                    result.error_message = f"All {len(backup_models) + 1} models failed (primary + {len(backup_models)} backups): {first_error[:200]}"
+                    result.error_message = f"All {len(model_chain)} models failed: {first_error[:200]}"
                     logger.error(f"[{persona.id}]   FAILED: all models exhausted")
                     if bus:
                         await bus.emit(DashboardEvent(

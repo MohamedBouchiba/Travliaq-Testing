@@ -1,13 +1,16 @@
 """Factory to create configured browser-use Agent instances."""
 
+import logging
 from pathlib import Path
 
-from browser_use import Agent, Browser, ChatOpenAI
+from browser_use import Agent, Browser, ChatGoogle, ChatGroq, ChatOpenAI
 from browser_use.browser import BrowserProfile
 
 from .config import Settings
 from .persona_loader import PersonaDefinition
 from .task_prompt_builder import build_task_prompt
+
+logger = logging.getLogger(__name__)
 
 EXTEND_SYSTEM_MSG_FR = (
     "CRITIQUE: Ceci est un site français de planification de voyage. "
@@ -26,10 +29,31 @@ EXTEND_SYSTEM_MSG_EN = (
 )
 
 
-def create_llm(settings: Settings, model_override: str | None = None) -> ChatOpenAI:
-    """Create an OpenRouter LLM instance for browser-use."""
+def create_llm_for_model(model_id: str, settings: Settings):
+    """Create the right LLM provider based on model ID.
+
+    - gemini-* → ChatGoogle (Google AI Studio)
+    - meta-llama/* or groq models → ChatGroq
+    - anything else → ChatOpenAI via OpenRouter
+    """
+    if model_id.startswith("gemini"):
+        logger.debug(f"Creating ChatGoogle for {model_id}")
+        return ChatGoogle(
+            model=model_id,
+            api_key=settings.google_api_key,
+        )
+
+    if settings.groq_api_key and model_id.startswith(("meta-llama/", "openai/gpt-oss")):
+        logger.debug(f"Creating ChatGroq for {model_id}")
+        return ChatGroq(
+            model=model_id,
+            api_key=settings.groq_api_key,
+        )
+
+    # OpenRouter fallback
+    logger.debug(f"Creating ChatOpenAI (OpenRouter) for {model_id}")
     return ChatOpenAI(
-        model=model_override or settings.openrouter_model,
+        model=model_id,
         api_key=settings.openrouter_api_key,
         base_url="https://openrouter.ai/api/v1",
         max_retries=3,
@@ -75,19 +99,25 @@ def create_agent(
 
     Returns (agent, browser) so the caller can close the browser when done.
     """
-    task = build_task_prompt(persona, yaml_config)
-    llm = create_llm(settings, model_override=model_override)
-    browser = create_browser(yaml_config)
+    chain = settings.build_model_chain()
+    if not chain:
+        raise RuntimeError("No LLM API keys configured. Set GOOGLE_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY.")
 
-    agent_cfg = yaml_config.get("agent", {})
+    # Pick primary model
+    primary_model = model_override or chain[0]
+    llm = create_llm_for_model(primary_model, settings)
 
     # Agent-level fallback: browser-use switches on first 429/5xx mid-run
     fallback_llm = None
-    primary = model_override or settings.openrouter_model
-    for bm in settings.backup_models_list:
-        if bm != primary:
-            fallback_llm = create_llm(settings, model_override=bm)
+    for candidate in chain:
+        if candidate != primary_model:
+            fallback_llm = create_llm_for_model(candidate, settings)
             break
+
+    task = build_task_prompt(persona, yaml_config)
+    browser = create_browser(yaml_config)
+
+    agent_cfg = yaml_config.get("agent", {})
 
     # Conversation log path
     conv_dir = Path("output/conversations") / persona.id
