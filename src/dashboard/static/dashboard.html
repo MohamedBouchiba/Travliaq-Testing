@@ -23,7 +23,7 @@
   .footer { background: var(--bg2); display: flex; align-items: center; padding: 0 20px; gap: 24px; font-size: 13px; color: var(--text2); border-top: 1px solid var(--bg3); }
 
   /* Header badges */
-  .badge { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .badge { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; letter-spacing: 0.3px; }
   .badge-idle { background: var(--bg3); color: var(--text2); }
   .badge-running { background: #1e3a5f; color: var(--accent); animation: pulse 2s infinite; }
   .badge-completed { background: #14532d; color: var(--green); }
@@ -37,15 +37,16 @@
   /* Sidebar */
   .sidebar { background: var(--bg2); border-right: 1px solid var(--bg3); overflow-y: auto; padding: 12px; }
   .sidebar h2 { font-size: 12px; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; letter-spacing: 0.5px; }
-  .persona-card { padding: 10px 12px; border-radius: var(--radius); cursor: pointer; margin-bottom: 4px; transition: background 0.15s; display: flex; align-items: center; gap: 10px; }
+  .persona-card { padding: 10px 12px; border-radius: var(--radius); cursor: pointer; margin-bottom: 4px; transition: background 0.2s, border-color 0.2s; display: flex; align-items: flex-start; gap: 10px; border-left: 3px solid transparent; }
   .persona-card:hover { background: var(--bg3); }
-  .persona-card.active { background: var(--bg3); border-left: 3px solid var(--accent); }
-  .persona-icon { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .persona-icon.pending { background: var(--text3); }
-  .persona-icon.running { background: var(--accent); animation: pulse 1.5s infinite; }
-  .persona-icon.completed { background: var(--green); }
-  .persona-icon.failed { background: var(--red); }
-  .persona-icon.timeout { background: var(--yellow); }
+  .persona-card.active { background: linear-gradient(90deg, rgba(59,130,246,0.12) 0%, var(--bg3) 100%); border-left-color: var(--accent); }
+  .persona-avatar-sm { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; border: 2px solid var(--bg3); background: var(--bg3); object-fit: cover; }
+  .persona-avatar-sm.status-pending { border-color: var(--text3); }
+  .persona-avatar-sm.status-running { border-color: var(--accent); animation: pulse 1.5s infinite; }
+  .persona-avatar-sm.status-completed { border-color: var(--green); }
+  .persona-avatar-sm.status-failed { border-color: var(--red); }
+  .persona-avatar-sm.status-timeout { border-color: var(--yellow); }
+  .persona-role-snippet { font-size: 10px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; max-width: 180px; margin-top: 1px; }
   .persona-info { flex: 1; min-width: 0; }
   .persona-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .persona-meta { font-size: 11px; color: var(--text3); }
@@ -58,9 +59,12 @@
 
   /* Main panel */
   .panel { overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+  .panel > * { animation: fadeIn 0.2s ease-in; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
   /* Cards */
-  .card { background: var(--bg2); border-radius: var(--radius); padding: 16px; border: 1px solid var(--bg3); }
+  .card { background: var(--bg2); border-radius: var(--radius); padding: 16px; border: 1px solid var(--bg3); transition: border-color 0.2s; }
+  .card:hover { border-color: rgba(255,255,255,0.08); }
   .card h3 { font-size: 13px; text-transform: uppercase; color: var(--text3); margin-bottom: 12px; letter-spacing: 0.5px; }
   .card h4 { font-size: 12px; margin-bottom: 6px; }
 
@@ -351,6 +355,8 @@ function connectSSE() {
     if (data.type === 'state_snapshot') {
       state = data.data;
       if (state.started_at) startedAt = new Date(state.started_at);
+      const snapIds = Object.keys(state.personas);
+      if (snapIds.length && !selectedPersona) selectedPersona = snapIds[0];
       renderAll();
       return;
     }
@@ -364,6 +370,7 @@ function connectSSE() {
       startElapsedTimer();
       const ids = data.data?.persona_ids || [];
       ids.forEach(id => { state.personas[id] = { status: 'pending', stage: null }; });
+      if (ids.length && !selectedPersona) selectedPersona = ids[0];
     } else if (t.startsWith('stage_')) {
       state.current_persona = data.persona_id;
       state.current_stage = data.stage;
@@ -390,12 +397,28 @@ function connectSSE() {
       }
     } else if (t === 'persona_failed') {
       if (data.persona_id && state.personas[data.persona_id]) {
-        Object.assign(state.personas[data.persona_id], { status: 'failed', error: data.data?.error, stage: data.data?.stage });
+        const pf = state.personas[data.persona_id];
+        Object.assign(pf, { status: 'failed', error: data.data?.error, stage: data.data?.stage });
+        if (!pf.result_data) {
+          pf.result_data = {
+            status: 'failed', error_message: data.data?.error,
+            execution: { phases_reached: [], phase_furthest: null, total_steps: pf.current_step || null, total_messages: 0, widgets_interacted: [] },
+            evaluation: null, timing: { duration_seconds: null }, logs: {}, meta: {},
+          };
+        }
       }
     } else if (t === 'persona_timeout') {
       if (data.persona_id && state.personas[data.persona_id]) {
-        state.personas[data.persona_id].status = 'timeout';
-        state.personas[data.persona_id].error = data.data?.error;
+        const pt = state.personas[data.persona_id];
+        pt.status = 'timeout';
+        pt.error = data.data?.error;
+        if (!pt.result_data) {
+          pt.result_data = {
+            status: 'timeout', error_message: data.data?.error,
+            execution: { phases_reached: [], phase_furthest: null, total_steps: pt.current_step || null, total_messages: 0, widgets_interacted: [] },
+            evaluation: null, timing: { duration_seconds: null }, logs: {}, meta: {},
+          };
+        }
       }
     } else if (t === 'agent_step') {
       if (data.persona_id && state.personas[data.persona_id]) {
@@ -455,10 +478,14 @@ function formatDuration(s) {
 async function fetchPersonaMetadata() {
   try {
     const res = await fetch('/api/personas');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const list = await res.json();
     list.forEach(p => { personaMetadata[p.id] = p; });
-    renderSidebar();
-  } catch (e) { /* ignore */ }
+    renderAll();
+  } catch (e) {
+    console.warn('fetchPersonaMetadata failed, retrying in 3s:', e);
+    setTimeout(fetchPersonaMetadata, 3000);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -503,17 +530,97 @@ function renderSidebar() {
     const stepText = p.current_step != null ? ` (${p.current_step}/${p.max_steps || '?'})` : '';
     const loopWarn = p.loops?.length ? `<span class="loop-indicator">\u26A0 ${p.loops.length}</span>` : '';
     const metaLine = meta ? `<div class="persona-detail">${langFlag(meta.language)} ${meta.travel_profile?.group_type || meta.group_type || ''}${meta.travel_profile?.budget_range ? ' | ' + meta.travel_profile.budget_range.split(' ')[0] : (meta.budget ? ' | ' + meta.budget.split(' ')[0] : '')}</div>` : '';
+    const avatarUrl = `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(meta?.name || id)}&backgroundColor=65c9ff,b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf&size=36`;
+    const roleSnippet = meta?.role ? `<div class="persona-role-snippet">${esc(meta.role.substring(0, 60))}${meta.role.length > 60 ? '...' : ''}</div>` : '';
 
     return `<div class="persona-card ${isActive ? 'active' : ''}" onclick="selectPersona('${id}')">
-      <div class="persona-icon ${p.status}"></div>
+      <img class="persona-avatar-sm status-${p.status}" src="${avatarUrl}" alt="" onerror="this.style.display='none'" />
       <div class="persona-info">
         <div class="persona-name">${meta?.name || id.replace(/_/g, ' ')}${loopWarn}</div>
         <div class="persona-meta">${p.status}${stageText ? ' - ' + stageText : ''}${stepText}</div>
+        ${roleSnippet}
         ${metaLine}
       </div>
       ${scoreHtml}
     </div>`;
   }).join('');
+}
+
+// ---------------------------------------------------------------------------
+// Batch Overview (when no persona selected)
+// ---------------------------------------------------------------------------
+function renderBatchOverview() {
+  const ids = Object.keys(state.personas);
+  if (ids.length === 0) return '<div class="empty"><p>Select a persona from the sidebar</p></div>';
+
+  const counts = { pending: 0, running: 0, completed: 0, failed: 0, timeout: 0 };
+  ids.forEach(id => { const s = state.personas[id].status; counts[s] = (counts[s] || 0) + 1; });
+
+  const scores = ids.map(id => state.personas[id].score).filter(s => s != null);
+  const avg = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+  const min = scores.length ? Math.min(...scores) : null;
+  const max = scores.length ? Math.max(...scores) : null;
+
+  const totalDone = counts.completed + counts.failed + counts.timeout;
+  const pctDone = ids.length ? Math.round((totalDone / ids.length) * 100) : 0;
+
+  let html = `<div class="card">
+    <h3>Batch Overview</h3>
+    <div class="kpi-grid">
+      <div class="kpi-item">
+        <div class="kpi-value">${ids.length}</div>
+        <div class="kpi-label">Total Personas</div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-value" style="color:${pctDone === 100 ? 'var(--green)' : 'var(--accent)'}">${pctDone}%</div>
+        <div class="kpi-label">Progress</div>
+        <div style="font-size:10px;color:var(--text3)">${totalDone}/${ids.length} finished</div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-value" style="color:var(--green)">${counts.completed}</div>
+        <div class="kpi-label">Completed</div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-value" style="color:var(--red)">${counts.failed}</div>
+        <div class="kpi-label">Failed</div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-value" style="color:var(--yellow)">${counts.timeout}</div>
+        <div class="kpi-label">Timeout</div>
+      </div>
+      ${avg != null ? `<div class="kpi-item">
+        <div class="kpi-value" style="color:${scoreColor(avg)}">${avg.toFixed(1)}</div>
+        <div class="kpi-label">Avg Score</div>
+        <div style="font-size:10px;color:var(--text3)">${min.toFixed(1)} \u2013 ${max.toFixed(1)}</div>
+      </div>` : `<div class="kpi-item">
+        <div class="kpi-value" style="color:var(--text3)">-</div>
+        <div class="kpi-label">Avg Score</div>
+      </div>`}
+    </div>
+  </div>`;
+
+  // Persona status grid
+  html += `<div class="card"><h3>Persona Status</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">`;
+  ids.forEach(id => {
+    const p = state.personas[id];
+    const meta = personaMetadata[id];
+    const name = meta?.name || id.replace(/_/g, ' ');
+    const avatarUrl = `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(meta?.name || id)}&backgroundColor=65c9ff,b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf&size=28`;
+    const scoreText = p.score != null ? p.score.toFixed(1) : '-';
+    const borderColor = p.status === 'completed' ? 'var(--green)' : p.status === 'failed' ? 'var(--red)' : p.status === 'timeout' ? 'var(--yellow)' : p.status === 'running' ? 'var(--accent)' : 'var(--bg3)';
+
+    html += `<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg);border-radius:var(--radius);cursor:pointer;border-left:3px solid ${borderColor};transition:background 0.15s" onclick="selectPersona('${id}')" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='var(--bg)'">
+      <img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%" alt="" onerror="this.style.display='none'" />
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}</div>
+        <div style="font-size:11px;color:var(--text3)">${p.status}${p.stage ? ' - ' + p.stage : ''}</div>
+      </div>
+      <span style="font-size:14px;font-weight:700;color:${p.score != null ? scoreColor(p.score) : 'var(--text3)'}">${scoreText}</span>
+    </div>`;
+  });
+  html += '</div></div>';
+
+  return html;
 }
 
 // ---------------------------------------------------------------------------
@@ -535,7 +642,7 @@ function renderPanel() {
   const p = sel ? state.personas[sel] : null;
 
   if (!p) {
-    panel.innerHTML = '<div class="empty"><p>Select a persona from the sidebar</p></div>';
+    panel.innerHTML = renderBatchOverview();
     return;
   }
 
@@ -561,7 +668,7 @@ function renderPanel() {
   html += renderStepProgress(p);
 
   // 7. KPI Metrics Dashboard
-  if (rd) html += renderKPIDashboard(sel, p, rd);
+  if (rd && (rd.execution?.total_steps > 0 || rd.evaluation?.overall_score != null)) html += renderKPIDashboard(sel, p, rd);
 
   // 8. Execution Stats
   html += renderExecutionStats(p);
@@ -797,7 +904,8 @@ function renderErrorPanel(p) {
     suggestion = 'The model returned invalid JSON. Try a different model with better structured output support.';
   }
 
-  return `<div class="card" style="border-color:${color}">
+  const bgGrad = isTimeout ? 'rgba(234,179,8,0.04)' : 'rgba(239,68,68,0.04)';
+  return `<div class="card" style="border-color:${color};background:linear-gradient(135deg, ${bgGrad} 0%, var(--bg2) 100%)">
     <h3 style="color:${color}">${icon} ${title}</h3>
     <div class="meta-grid">
       <div class="meta-item"><div class="meta-label">Error Type</div><div class="meta-value" style="color:${color}">${errorType}</div></div>

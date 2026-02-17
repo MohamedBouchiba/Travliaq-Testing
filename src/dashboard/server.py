@@ -96,18 +96,46 @@ async def _state_updater() -> None:
 
         elif etype == "persona_failed":
             if event.persona_id and event.persona_id in _batch_state["personas"]:
-                _batch_state["personas"][event.persona_id].update({
+                p = _batch_state["personas"][event.persona_id]
+                p.update({
                     "status": "failed",
                     "stage": event.data.get("stage"),
                     "error": event.data.get("error"),
                 })
+                if not p.get("result_data"):
+                    p["result_data"] = {
+                        "status": "failed",
+                        "error_message": event.data.get("error"),
+                        "execution": {
+                            "phases_reached": [], "phase_furthest": None,
+                            "total_steps": p.get("current_step"),
+                            "total_messages": 0, "widgets_interacted": [],
+                        },
+                        "evaluation": None,
+                        "timing": {"duration_seconds": None},
+                        "logs": {}, "meta": {},
+                    }
 
         elif etype == "persona_timeout":
             if event.persona_id and event.persona_id in _batch_state["personas"]:
-                _batch_state["personas"][event.persona_id].update({
+                p = _batch_state["personas"][event.persona_id]
+                p.update({
                     "status": "timeout",
                     "error": event.data.get("error"),
                 })
+                if not p.get("result_data"):
+                    p["result_data"] = {
+                        "status": "timeout",
+                        "error_message": event.data.get("error"),
+                        "execution": {
+                            "phases_reached": [], "phase_furthest": None,
+                            "total_steps": p.get("current_step"),
+                            "total_messages": 0, "widgets_interacted": [],
+                        },
+                        "evaluation": None,
+                        "timing": {"duration_seconds": None},
+                        "logs": {}, "meta": {},
+                    }
 
         elif etype == "agent_step":
             if event.persona_id and event.persona_id in _batch_state["personas"]:
