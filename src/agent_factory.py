@@ -26,7 +26,8 @@ EXTEND_SYSTEM_MSG_FR = (
     "Le champ de texte du chat a l'aria-label 'Envoyer un message...' (FR). "
     "Quand tu vois des widgets (calendriers, sliders, boutons), interagis avec eux en cliquant. "
     "Attends que l'indicateur de frappe (3 points animés) disparaisse avant d'envoyer ton message. "
-    "Concentre-toi UNIQUEMENT sur le panneau de chat à gauche, ignore la carte à droite."
+    "Après avoir tapé un message, APPUIE sur Entrée ou CLIQUE sur le bouton Envoyer. Ne laisse jamais un message non envoyé. "
+    "La carte à droite va se charger, observe-la mais concentre-toi sur le chat à gauche."
 )
 
 EXTEND_SYSTEM_MSG_EN = (
@@ -34,7 +35,8 @@ EXTEND_SYSTEM_MSG_EN = (
     "The chat input textarea has aria-label 'Send a message...' (EN) or 'Envoyer un message...' (FR). "
     "When you see widgets (date pickers, sliders, buttons), interact with them by clicking. "
     "Wait for typing indicators (3 animated dots) to finish before sending your next message. "
-    "Focus ONLY on the left chat panel, ignore the map on the right."
+    "After typing a message, PRESS Enter or CLICK the Send button. Never leave an unsent message. "
+    "The map on the right will load, observe it but focus on the left chat panel."
 )
 
 
@@ -83,10 +85,9 @@ def create_browser(yaml_config: dict) -> Browser:
         headless=browser_cfg.get("headless", False),
         chromium_sandbox=False,
         args=[
-            "--disable-gpu",
-            "--disable-webgl",
-            "--disable-webgl2",
-            "--disable-software-rasterizer",
+            "--use-gl=swiftshader",
+            "--enable-webgl",
+            "--ignore-gpu-blocklist",
         ],
         window_size={
             "width": browser_cfg.get("window_width", 1440),

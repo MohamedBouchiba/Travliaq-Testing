@@ -24,6 +24,7 @@ NAVIGATION:
 INTERFACE DE CHAT:
 - Le champ de texte pour écrire a l'aria-label "Envoyer un message..." (FR) ou "Send a message..." (EN).
 - Le bouton d'envoi a l'aria-label "Envoyer" (FR) ou "Send" (EN).
+- Après avoir tapé ton message, tu DOIS appuyer sur Entrée OU cliquer sur le bouton "Envoyer" (aria-label "Envoyer"). Ne laisse JAMAIS un message non envoyé dans le champ de texte.
 - Au-dessus du champ de texte, il y a des "Smart Suggestions" : des boutons/chips cliquables (role="toolbar").
 - Quand l'assistant réfléchit, un indicateur de frappe (3 points animés) apparaît. ATTENDS qu'il disparaisse avant d'agir.
 - Si un message d'erreur apparaît, clique sur le bouton "Réessayer" / "Retry".
@@ -40,11 +41,10 @@ WIDGETS INTERACTIFS (apparaissent dans les messages de l'assistant):
 - CONFIRMATION D'AÉROPORT (airportConfirmation) : Des boutons avec les aéroports. Clique pour confirmer.
 - Après confirmation, le widget se replie avec un bouton "Modifier" si tu veux changer.
 
-ERREURS DE CARTE (IGNORER):
-- Le panneau droit (carte) peut afficher une erreur WebGL ou être complètement vide. C'est NORMAL.
-- IGNORE complètement la carte et toute erreur visuelle sur le panneau droit.
-- NE CLIQUE JAMAIS sur la carte, ses messages d'erreur, ou ses boutons de rechargement.
-- Concentre-toi UNIQUEMENT sur le panneau de chat à GAUCHE.
+CARTE (PANNEAU DROIT):
+- Le panneau droit affiche une carte interactive (Mapbox). Elle peut mettre quelques secondes à charger.
+- Tu peux OBSERVER la carte pour vérifier que les destinations apparaissent, mais ne clique PAS dessus.
+- Concentre-toi principalement sur le panneau de chat à GAUCHE pour tes interactions.
 
 RÈGLES IMPORTANTES:
 - Quand un widget apparaît, INTERAGIS AVEC LUI en cliquant sur ses éléments. Ne tape PAS par-dessus.
@@ -66,6 +66,7 @@ NAVIGATION:
 CHAT INTERFACE:
 - The text input has aria-label "Send a message..." (EN) or "Envoyer un message..." (FR).
 - The send button has aria-label "Send" (EN) or "Envoyer" (FR).
+- After typing your message, you MUST press Enter OR click the "Send" button (aria-label "Send"). NEVER leave an unsent message in the text input.
 - Above the input, there are "Smart Suggestions": clickable chip buttons (role="toolbar").
 - When the assistant is thinking, a typing indicator (3 animated dots) appears. WAIT for it to disappear before acting.
 - If an error message appears, click the "Retry" / "Réessayer" button.
@@ -82,11 +83,10 @@ INTERACTIVE WIDGETS (appear within assistant messages):
 - AIRPORT CONFIRMATION (airportConfirmation): Airport buttons. Click to confirm.
 - After confirming, widgets collapse with a "Modify" / "Modifier" button.
 
-MAP ERRORS (IGNORE):
-- The right panel (map) may display a WebGL error or be completely blank. This is NORMAL.
-- IGNORE the map entirely and any visual errors on the right panel.
-- NEVER click on the map, its error messages, or its reload buttons.
-- Focus ONLY on the chat panel on the LEFT.
+MAP (RIGHT PANEL):
+- The right panel displays an interactive map (Mapbox). It may take a few seconds to load.
+- You can OBSERVE the map to verify destinations appear, but do NOT click on it.
+- Focus primarily on the chat panel on the LEFT for your interactions.
 
 IMPORTANT RULES:
 - When a widget appears, INTERACT WITH IT by clicking its elements. Do NOT type over it.
