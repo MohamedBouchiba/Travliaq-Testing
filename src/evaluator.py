@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Any, Dict
 
-from openai import APIStatusError, AzureOpenAI
+from openai import APIStatusError, OpenAI
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -153,15 +153,23 @@ async def evaluate_run(
     eval_cfg = yaml_config.get("evaluation", {})
     temperature = eval_cfg.get("temperature", 0.3)
 
-    client = AzureOpenAI(
-        azure_endpoint=settings.azure_openai_endpoint,
-        api_key=settings.azure_openai_api_key,
-        api_version=settings.azure_openai_api_version,
+    client = OpenAI(
+        api_key=settings.openrouter_api_key,
+        base_url="https://openrouter.ai/api/v1",
+        default_headers={
+            "HTTP-Referer": "https://travliaq.com",
+            "X-Title": "Travliaq-Testing",
+        },
     )
 
     user_prompt = _build_eval_user_prompt(result, persona)
 
     logger.info(f"[{persona.id}] Running evaluation LLM call...")
+
+    messages = [
+        {"role": "system", "content": EVALUATION_SYSTEM_PROMPT},
+        {"role": "user", "content": user_prompt},
+    ]
 
     @retry(
         stop=stop_after_attempt(3),
@@ -171,15 +179,22 @@ async def evaluate_run(
         reraise=True,
     )
     def _call_eval_llm():
-        return client.chat.completions.create(
-            model=settings.azure_openai_deployment,
-            messages=[
-                {"role": "system", "content": EVALUATION_SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=temperature,
-            response_format={"type": "json_object"},
-        )
+        try:
+            return client.chat.completions.create(
+                model=settings.openrouter_model,
+                messages=messages,
+                temperature=temperature,
+                response_format={"type": "json_object"},
+            )
+        except Exception as e:
+            if "response_format" in str(e).lower() or "json" in str(e).lower():
+                logger.warning(f"[eval] json_object mode not supported, retrying without response_format: {e}")
+                return client.chat.completions.create(
+                    model=settings.openrouter_model,
+                    messages=messages,
+                    temperature=temperature,
+                )
+            raise
 
     response = _call_eval_llm()
 

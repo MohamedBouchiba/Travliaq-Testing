@@ -17,11 +17,9 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Azure OpenAI
-    azure_openai_endpoint: str
-    azure_openai_api_key: str
-    azure_openai_deployment: str = "gpt-4o"
-    azure_openai_api_version: str = "2025-03-01-preview"
+    # OpenRouter
+    openrouter_api_key: str
+    openrouter_model: str = "z-ai/glm-4.5-air:free"
 
     # Environment
     log_level: str = "INFO"

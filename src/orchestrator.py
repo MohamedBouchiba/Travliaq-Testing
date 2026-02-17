@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from openai import APIStatusError, AzureOpenAI
+from openai import APIStatusError, OpenAI
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -41,15 +41,18 @@ def _log_banner(persona_id: str, message: str) -> None:
     before_sleep=before_sleep_log(logger, logging.WARNING),
     reraise=True,
 )
-def _check_azure_health(settings: Settings) -> bool:
-    """Lightweight Azure OpenAI connectivity check with retry."""
-    client = AzureOpenAI(
-        azure_endpoint=settings.azure_openai_endpoint,
-        api_key=settings.azure_openai_api_key,
-        api_version=settings.azure_openai_api_version,
+def _check_llm_health(settings: Settings) -> bool:
+    """Lightweight OpenRouter connectivity check with retry."""
+    client = OpenAI(
+        api_key=settings.openrouter_api_key,
+        base_url="https://openrouter.ai/api/v1",
+        default_headers={
+            "HTTP-Referer": "https://travliaq.com",
+            "X-Title": "Travliaq-Testing",
+        },
     )
     client.chat.completions.create(
-        model=settings.azure_openai_deployment,
+        model=settings.openrouter_model,
         messages=[{"role": "user", "content": "ping"}],
         max_tokens=5,
     )
@@ -72,7 +75,7 @@ async def run_single_persona(
     logger.info(f"[{persona.id}] Group: {persona.travel_profile.group_type}")
     logger.info(f"[{persona.id}] Budget: {persona.travel_profile.budget_range}")
     logger.info(f"[{persona.id}] Phases planned: {[g.phase for g in persona.conversation_goals]}")
-    logger.info(f"[{persona.id}] LLM: {settings.azure_openai_deployment}")
+    logger.info(f"[{persona.id}] LLM: {settings.openrouter_model}")
 
     result = TestRunResult(
         run_id=f"{persona.id}-{run_id}",
@@ -82,7 +85,7 @@ async def run_single_persona(
         persona_language=persona.language,
         started_at=started_at,
         status=RunStatus.RUNNING,
-        llm_model_used=settings.azure_openai_deployment,
+        llm_model_used=settings.openrouter_model,
         config_snapshot={
             "agent": yaml_config.get("agent", {}),
             "browser": yaml_config.get("browser", {}),
@@ -95,21 +98,21 @@ async def run_single_persona(
     bus = get_event_bus()
 
     try:
-        # --- Step 0: Azure health check ---
-        logger.info(f"[{persona.id}] [0/5] Checking Azure OpenAI connectivity...")
+        # --- Step 0: LLM health check ---
+        logger.info(f"[{persona.id}] [0/5] Checking OpenRouter connectivity...")
         if bus:
             await bus.emit(DashboardEvent(
                 type=EventType.STAGE_HEALTH_CHECK, persona_id=persona.id,
                 batch_id=batch_id, stage="0/5",
-                data={"message": "Checking Azure OpenAI connectivity"},
+                data={"message": "Checking OpenRouter connectivity"},
             ))
         try:
-            _check_azure_health(settings)
-            logger.info(f"[{persona.id}]   Azure health check PASSED")
+            _check_llm_health(settings)
+            logger.info(f"[{persona.id}]   OpenRouter health check PASSED")
         except Exception as e:
-            logger.error(f"[{persona.id}]   Azure health check FAILED after retries: {e}")
+            logger.error(f"[{persona.id}]   OpenRouter health check FAILED after retries: {e}")
             result.status = RunStatus.FAILED
-            result.error_message = f"Azure health check failed: {e}"
+            result.error_message = f"OpenRouter health check failed: {e}"
             if bus:
                 await bus.emit(DashboardEvent(
                     type=EventType.PERSONA_FAILED, persona_id=persona.id,

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from browser_use import Agent, Browser, ChatAzureOpenAI
+from browser_use import Agent, Browser, ChatOpenAI
 from browser_use.browser import BrowserProfile
 
 from .config import Settings
@@ -26,15 +26,17 @@ EXTEND_SYSTEM_MSG_EN = (
 )
 
 
-def create_llm(settings: Settings) -> ChatAzureOpenAI:
-    """Create an Azure OpenAI LLM instance for browser-use."""
-    return ChatAzureOpenAI(
-        model=settings.azure_openai_deployment,
-        azure_endpoint=settings.azure_openai_endpoint,
-        api_key=settings.azure_openai_api_key,
-        azure_deployment=settings.azure_openai_deployment,
-        api_version=settings.azure_openai_api_version,
+def create_llm(settings: Settings) -> ChatOpenAI:
+    """Create an OpenRouter LLM instance for browser-use."""
+    return ChatOpenAI(
+        model=settings.openrouter_model,
+        api_key=settings.openrouter_api_key,
+        base_url="https://openrouter.ai/api/v1",
         max_retries=3,
+        default_headers={
+            "HTTP-Referer": "https://travliaq.com",
+            "X-Title": "Travliaq-Testing",
+        },
     )
 
 
