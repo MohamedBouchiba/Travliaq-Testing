@@ -44,15 +44,22 @@ def _log_banner(persona_id: str, message: str) -> None:
 def _check_llm_health(settings: Settings) -> bool:
     """Lightweight LLM connectivity check with retry.
 
-    Uses whichever primary provider is configured (Google > Groq > OpenRouter).
+    Checks the primary provider first (OpenRouter > Groq > Google).
     """
-    if settings.google_api_key:
-        from google import genai
-        client = genai.Client(api_key=settings.google_api_key)
-        client.models.generate_content(
-            model=settings.google_model,
-            contents="ping",
-            config={"max_output_tokens": 5},
+    if settings.openrouter_api_key and settings.openrouter_model:
+        from openai import OpenAI
+        client = OpenAI(
+            api_key=settings.openrouter_api_key,
+            base_url="https://openrouter.ai/api/v1",
+            default_headers={
+                "HTTP-Referer": "https://travliaq.com",
+                "X-Title": "Travliaq-Testing",
+            },
+        )
+        client.chat.completions.create(
+            model=settings.openrouter_model,
+            messages=[{"role": "user", "content": "ping"}],
+            max_tokens=5,
         )
         return True
 
@@ -66,20 +73,13 @@ def _check_llm_health(settings: Settings) -> bool:
         )
         return True
 
-    if settings.openrouter_api_key:
-        from openai import OpenAI
-        client = OpenAI(
-            api_key=settings.openrouter_api_key,
-            base_url="https://openrouter.ai/api/v1",
-            default_headers={
-                "HTTP-Referer": "https://travliaq.com",
-                "X-Title": "Travliaq-Testing",
-            },
-        )
-        client.chat.completions.create(
-            model=settings.openrouter_eval_model,
-            messages=[{"role": "user", "content": "ping"}],
-            max_tokens=5,
+    if settings.google_api_key:
+        from google import genai
+        client = genai.Client(api_key=settings.google_api_key)
+        client.models.generate_content(
+            model=settings.google_model,
+            contents="ping",
+            config={"max_output_tokens": 5},
         )
         return True
 
