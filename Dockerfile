@@ -32,5 +32,8 @@ RUN mkdir -p output/results output/screenshots output/conversations
 ENV PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
 ENV DISPLAY=:99
 
-# Run ALL personas sequentially on startup (headless)
-CMD ["python", "cli.py", "batch", "--headless"]
+# Expose dashboard port
+EXPOSE 8099
+
+# Start dashboard with auto-batch (headless, no browser auto-open)
+CMD ["python", "cli.py", "dashboard", "--run-batch", "--headless", "--no-browser"]
