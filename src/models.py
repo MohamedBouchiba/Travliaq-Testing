@@ -61,6 +61,7 @@ class TestRunResult(BaseModel):
 
     # Evaluation
     scores: EvaluationScores = Field(default_factory=EvaluationScores)
+    score_justifications: Dict[str, str] = Field(default_factory=dict)
     score_overall: Optional[float] = None
     evaluation_summary: Optional[str] = None
     strengths: List[str] = Field(default_factory=list)
@@ -76,7 +77,13 @@ class TestRunResult(BaseModel):
         scores_data = evaluation.get("scores", {})
         for axis, data in scores_data.items():
             if hasattr(self.scores, axis):
-                score_val = data.get("score", 0.0) if isinstance(data, dict) else data
+                if isinstance(data, dict):
+                    score_val = data.get("score", 0.0)
+                    justification = data.get("justification", "")
+                    if justification:
+                        self.score_justifications[axis] = justification
+                else:
+                    score_val = data
                 setattr(self.scores, axis, score_val)
 
         self.score_overall = evaluation.get("overall_score")
@@ -112,15 +119,15 @@ class TestRunResult(BaseModel):
             "evaluation": {
                 "overall_score": self.score_overall,
                 "scores": {
-                    "fluidity": self.scores.fluidity,
-                    "relevance": self.scores.relevance,
-                    "visual_clarity": self.scores.visual_clarity,
-                    "error_handling": self.scores.error_handling,
-                    "conversation_memory": self.scores.conversation_memory,
-                    "widget_usability": self.scores.widget_usability,
-                    "map_interaction": self.scores.map_interaction,
-                    "response_speed": self.scores.response_speed,
-                    "personality_match": self.scores.personality_match,
+                    axis: {
+                        "score": getattr(self.scores, axis),
+                        "justification": self.score_justifications.get(axis, ""),
+                    }
+                    for axis in [
+                        "fluidity", "relevance", "visual_clarity", "error_handling",
+                        "conversation_memory", "widget_usability", "map_interaction",
+                        "response_speed", "personality_match",
+                    ]
                 },
                 "summary": self.evaluation_summary,
                 "strengths": self.strengths,

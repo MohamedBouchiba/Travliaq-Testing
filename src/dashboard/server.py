@@ -115,12 +115,14 @@ async def _state_updater() -> None:
                 p["current_step"] = event.data.get("step_number")
                 p["max_steps"] = event.data.get("max_steps")
                 p["current_url"] = event.data.get("url")
+                p["current_thinking"] = event.data.get("thinking")
                 if "step_history" not in p:
                     p["step_history"] = []
                 p["step_history"].append({
                     "step": event.data.get("step_number"),
                     "actions": event.data.get("actions"),
                     "url": event.data.get("url"),
+                    "thinking": event.data.get("thinking"),
                 })
                 if len(p["step_history"]) > 20:
                     p["step_history"] = p["step_history"][-20:]
@@ -237,7 +239,7 @@ async def get_result(filename: str) -> JSONResponse:
 
 @app.get("/api/personas")
 async def list_personas() -> JSONResponse:
-    """List all available persona definitions."""
+    """List all available persona definitions (full data)."""
     from ..persona_loader import load_all_personas
 
     personas = load_all_personas()
@@ -245,10 +247,39 @@ async def list_personas() -> JSONResponse:
         {
             "id": p.id,
             "name": p.name,
+            "age": p.age,
             "language": p.language,
-            "group_type": p.travel_profile.group_type,
-            "budget": p.travel_profile.budget_range,
-            "phases": len(p.conversation_goals),
+            "role": p.role,
+            "personality_traits": p.personality_traits,
+            "conversation_style": {
+                "verbosity": p.conversation_style.verbosity,
+                "formality": p.conversation_style.formality,
+                "asks_questions": p.conversation_style.asks_questions,
+                "expresses_frustration": p.conversation_style.expresses_frustration,
+                "changes_mind": p.conversation_style.changes_mind,
+            },
+            "travel_profile": {
+                "group_type": p.travel_profile.group_type,
+                "travelers": p.travel_profile.travelers,
+                "budget_range": p.travel_profile.budget_range,
+                "preferred_destinations": p.travel_profile.preferred_destinations,
+                "avoided": p.travel_profile.avoided,
+                "trip_type": p.travel_profile.trip_type,
+                "flexibility": p.travel_profile.flexibility,
+                "preferred_month": p.travel_profile.preferred_month,
+                "trip_duration": p.travel_profile.trip_duration,
+            },
+            "conversation_goals": [
+                {
+                    "phase": g.phase,
+                    "goal": g.goal,
+                    "widget_interactions": g.widget_interactions,
+                    "min_messages": g.min_messages,
+                    "success_indicator": g.success_indicator,
+                }
+                for g in p.conversation_goals
+            ],
+            "evaluation_weight_overrides": p.evaluation_weight_overrides,
         }
         for p in personas
     ])

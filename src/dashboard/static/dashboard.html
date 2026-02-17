@@ -62,6 +62,7 @@
   /* Cards */
   .card { background: var(--bg2); border-radius: var(--radius); padding: 16px; border: 1px solid var(--bg3); }
   .card h3 { font-size: 13px; text-transform: uppercase; color: var(--text3); margin-bottom: 12px; letter-spacing: 0.5px; }
+  .card h4 { font-size: 12px; margin-bottom: 6px; }
 
   /* Active run monitor */
   .run-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
@@ -84,6 +85,62 @@
   /* Pills */
   .pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
   .pill { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--bg3); color: var(--text2); }
+
+  /* Persona Profile Card */
+  .persona-profile { display: grid; grid-template-columns: 80px 1fr; gap: 16px; align-items: start; }
+  .persona-avatar { width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--bg3); background: var(--bg3); }
+  .persona-header-info { display: flex; flex-direction: column; gap: 3px; }
+  .persona-header-info .pname { font-size: 20px; font-weight: 700; }
+  .persona-header-info .age-lang { font-size: 13px; color: var(--text2); }
+  .persona-role { font-size: 13px; color: var(--text2); line-height: 1.5; margin-top: 10px; font-style: italic; border-left: 3px solid var(--bg3); padding-left: 12px; }
+
+  .trait-pill { font-size: 11px; padding: 3px 10px; border-radius: 12px; font-weight: 500; }
+  .trait-pill:nth-child(4n+1) { background: #1e3a5f; color: #60a5fa; }
+  .trait-pill:nth-child(4n+2) { background: #14532d; color: #4ade80; }
+  .trait-pill:nth-child(4n+3) { background: #3b0764; color: #c084fc; }
+  .trait-pill:nth-child(4n+4) { background: #422006; color: #fbbf24; }
+
+  .conv-style-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .conv-style-item { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: var(--bg); color: var(--text2); display: flex; align-items: center; gap: 4px; }
+
+  .travel-detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; margin-top: 8px; }
+  .travel-detail-item { padding: 8px 10px; background: var(--bg); border-radius: var(--radius); }
+  .travel-detail-item .td-label { font-size: 10px; text-transform: uppercase; color: var(--text3); }
+  .travel-detail-item .td-value { font-size: 13px; font-weight: 500; margin-top: 2px; }
+
+  .goals-timeline { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+  .goal-row { display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; background: var(--bg); border-radius: var(--radius); }
+  .goal-indicator { font-size: 14px; flex-shrink: 0; line-height: 1.4; }
+  .goal-phase { font-size: 11px; font-weight: 600; color: var(--accent); min-width: 90px; text-transform: capitalize; }
+  .goal-desc { font-size: 12px; color: var(--text2); flex: 1; line-height: 1.4; }
+  .goal-widgets { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+  .goal-widget-pill { font-size: 10px; padding: 1px 6px; border-radius: 8px; background: var(--bg3); color: var(--text3); }
+
+  .weight-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .weight-badge { font-size: 10px; padding: 2px 6px; border-radius: 8px; background: #3b0764; color: #c084fc; }
+
+  .section-label { font-size: 11px; color: var(--text3); text-transform: uppercase; margin-top: 14px; margin-bottom: 4px; }
+
+  /* Enhanced Live Step */
+  .thinking-snippet { margin-top: 8px; padding: 8px 12px; background: var(--bg); border-left: 3px solid var(--purple); border-radius: 0 var(--radius) var(--radius) 0; font-size: 12px; color: var(--text2); font-style: italic; line-height: 1.5; }
+  .live-actions-feed { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; }
+  .live-action-row { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 2px 0; }
+  .live-action-step { color: var(--text3); font-variant-numeric: tabular-nums; min-width: 36px; font-weight: 600; }
+  .live-action-name { color: var(--text2); }
+  .live-action-url { color: var(--text3); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px; }
+
+  /* Justification cards */
+  .justification-card { margin-top: 8px; padding: 10px 12px; background: var(--bg); border-radius: var(--radius); border-left: 3px solid; }
+  .justification-card .axis-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .justification-card .axis-name { font-size: 12px; font-weight: 600; text-transform: capitalize; }
+  .justification-card .axis-score { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .justification-card .axis-text { font-size: 12px; color: var(--text2); line-height: 1.5; }
+
+  /* Phase comparison */
+  .phase-comparison { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .phase-chip { font-size: 11px; padding: 3px 10px; border-radius: 12px; font-weight: 500; }
+  .phase-chip.reached { background: #14532d; color: var(--green); }
+  .phase-chip.missed { background: #450a0a; color: var(--red); opacity: 0.7; }
 
   /* Scores */
   .scores-layout { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
@@ -129,6 +186,8 @@
   .screenshot-thumb:hover { border-color: var(--accent); }
   .screenshot-thumb img { width: 100%; height: 80px; object-fit: cover; display: block; }
   .screenshot-label { font-size: 10px; color: var(--text3); text-align: center; padding: 2px; }
+  .screenshot-lightbox { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 1000; cursor: pointer; }
+  .screenshot-lightbox img { max-width: 90%; max-height: 90%; border-radius: var(--radius); }
 
   /* Empty states */
   .empty { text-align: center; padding: 40px; color: var(--text3); }
@@ -233,7 +292,6 @@ function connectSSE() {
         state.personas[data.persona_id].stage = data.stage;
       }
       if (!selectedPersona) selectedPersona = data.persona_id;
-      // Track model fallback
       if (t === 'stage_run_agent' && data.data?.fallback && data.persona_id && state.personas[data.persona_id]) {
         state.personas[data.persona_id].used_backup_model = true;
         state.personas[data.persona_id].backup_model_name = data.data?.message || '';
@@ -265,8 +323,9 @@ function connectSSE() {
         p.current_step = data.data?.step_number;
         p.max_steps = data.data?.max_steps;
         p.current_url = data.data?.url;
+        p.current_thinking = data.data?.thinking;
         if (!p.step_history) p.step_history = [];
-        p.step_history.push({ step: data.data?.step_number, actions: data.data?.actions, url: data.data?.url });
+        p.step_history.push({ step: data.data?.step_number, actions: data.data?.actions, url: data.data?.url, thinking: data.data?.thinking });
         if (p.step_history.length > 20) p.step_history = p.step_history.slice(-20);
       }
     } else if (t === 'loop_detected') {
@@ -358,13 +417,13 @@ function renderSidebar() {
     const scoreHtml = p.score != null ? `<span class="persona-score ${p.score >= 7 ? 'score-good' : p.score >= 5 ? 'score-mid' : 'score-bad'}">${p.score.toFixed(1)}</span>` : '';
     const stageText = p.stage || '';
     const stepText = p.current_step != null ? ` (${p.current_step}/${p.max_steps || '?'})` : '';
-    const loopWarn = p.loops?.length ? `<span class="loop-indicator">\u26A0 ${p.loops.length} loop${p.loops.length > 1 ? 's' : ''}</span>` : '';
-    const metaLine = meta ? `<div class="persona-detail">${langFlag(meta.language)} ${meta.group_type || ''}${meta.budget ? ' | ' + meta.budget.split(' ')[0] : ''}</div>` : '';
+    const loopWarn = p.loops?.length ? `<span class="loop-indicator">\u26A0 ${p.loops.length}</span>` : '';
+    const metaLine = meta ? `<div class="persona-detail">${langFlag(meta.language)} ${meta.travel_profile?.group_type || meta.group_type || ''}${meta.travel_profile?.budget_range ? ' | ' + meta.travel_profile.budget_range.split(' ')[0] : (meta.budget ? ' | ' + meta.budget.split(' ')[0] : '')}</div>` : '';
 
     return `<div class="persona-card ${isActive ? 'active' : ''}" onclick="selectPersona('${id}')">
       <div class="persona-icon ${p.status}"></div>
       <div class="persona-info">
-        <div class="persona-name">${id.replace(/_/g, ' ')}${loopWarn}</div>
+        <div class="persona-name">${meta?.name || id.replace(/_/g, ' ')}${loopWarn}</div>
         <div class="persona-meta">${p.status}${stageText ? ' - ' + stageText : ''}${stepText}</div>
         ${metaLine}
       </div>
@@ -374,7 +433,7 @@ function renderSidebar() {
 }
 
 // ---------------------------------------------------------------------------
-// Panel — 10 sections
+// Panel
 // ---------------------------------------------------------------------------
 function renderPanel() {
   const panel = document.getElementById('panel');
@@ -399,8 +458,8 @@ function renderPanel() {
   const rd = p.result_data;
   let html = '';
 
-  // 1. Persona Banner
-  html += renderBanner(sel, p);
+  // 1. Persona Profile
+  html += renderPersonaProfile(sel, p);
 
   // 2. Error/Blockage Panel
   html += renderErrorPanel(p);
@@ -422,13 +481,18 @@ function renderPanel() {
     html += renderEvaluationCard(rd);
   }
 
-  // 8. Conversation Log (collapsible)
+  // 8. Feedback (Retour d'experience)
+  if (rd?.evaluation) {
+    html += renderFeedback(rd);
+  }
+
+  // 9. Conversation Log (collapsible)
   html += renderConversationLog(rd);
 
-  // 9. Agent Thoughts (collapsible)
+  // 10. Agent Thoughts (collapsible)
   html += renderAgentThoughts(rd);
 
-  // 10. Event Log
+  // 11. Event Log
   html += `<div class="card">
     <h3>Event Log</h3>
     <div class="event-log" id="eventLog">${renderEventLog()}</div>
@@ -440,36 +504,125 @@ function renderPanel() {
   const canvas = document.getElementById('radar');
   if (canvas && rd?.evaluation?.scores) drawRadar(canvas, rd.evaluation.scores);
 
-  // Auto-scroll event log
   const logEl = document.getElementById('eventLog');
   if (logEl) logEl.scrollTop = logEl.scrollHeight;
 }
 
-// --- Section 1: Persona Banner ---
-function renderBanner(id, p) {
+// ---------------------------------------------------------------------------
+// Section 1: Persona Profile Card
+// ---------------------------------------------------------------------------
+function renderPersonaProfile(id, p) {
   const rd = p.result_data;
   const meta = personaMetadata[id];
   const runId = rd?.run_id || '';
   const model = rd?.meta?.llm_model_used || '';
+  const avatarUrl = `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(meta?.name || id)}`;
 
-  return `<div class="card">
-    <div class="run-header">
-      <span class="name">${id.replace(/_/g, ' ')}</span>
-      <span class="badge badge-${p.status}">${p.status.toUpperCase()}</span>
-      ${meta?.language ? `<span class="lang">${langFlag(meta.language)} ${meta.language.toUpperCase()}</span>` : ''}
-    </div>
-    <div class="meta-grid">
-      ${runId ? `<div class="meta-item"><div class="meta-label">Run ID</div><div class="meta-value">${esc(runId)}</div></div>` : ''}
-      ${model ? `<div class="meta-item"><div class="meta-label">LLM Model</div><div class="meta-value">${esc(model)}${p.used_backup_model ? ' <span class="badge" style="background:#f59e0b;font-size:10px">BACKUP</span>' : ''}</div></div>` : ''}
-      ${p.duration != null ? `<div class="meta-item"><div class="meta-label">Duration</div><div class="meta-value">${formatDuration(Math.floor(p.duration))}</div></div>` : ''}
-      ${meta?.group_type ? `<div class="meta-item"><div class="meta-label">Group</div><div class="meta-value">${esc(meta.group_type)}</div></div>` : ''}
-      ${meta?.budget ? `<div class="meta-item"><div class="meta-label">Budget</div><div class="meta-value">${esc(meta.budget)}</div></div>` : ''}
-      ${meta?.phases ? `<div class="meta-item"><div class="meta-label">Phases</div><div class="meta-value">${meta.phases}</div></div>` : ''}
-    </div>
-  </div>`;
+  let html = `<div class="card">
+    <div class="persona-profile">
+      <img class="persona-avatar" src="${avatarUrl}" alt="${esc(meta?.name || id)}" />
+      <div class="persona-header-info">
+        <div class="pname">${esc(meta?.name || id.replace(/_/g, ' '))}</div>
+        <div class="age-lang">${meta?.age ? meta.age + ' ans' : ''} ${meta?.language ? langFlag(meta.language) + ' ' + meta.language.toUpperCase() : ''}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px">
+          <span class="badge badge-${p.status}">${p.status.toUpperCase()}</span>
+          ${p.used_backup_model ? '<span class="badge" style="background:#422006;color:#fbbf24;font-size:10px">BACKUP MODEL</span>' : ''}
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">
+          ${runId ? 'Run: ' + esc(runId) : ''}
+          ${model ? ' | Model: ' + esc(model) : ''}
+          ${p.duration != null ? ' | ' + formatDuration(Math.floor(p.duration)) : ''}
+        </div>
+      </div>
+    </div>`;
+
+  // Role description
+  if (meta?.role) {
+    html += `<div class="persona-role">${esc(meta.role)}</div>`;
+  }
+
+  // Personality traits
+  if (meta?.personality_traits?.length) {
+    html += `<div class="section-label">Traits de personnalit\u00E9</div>
+      <div class="pills">${meta.personality_traits.map(t => `<span class="trait-pill">${esc(t)}</span>`).join('')}</div>`;
+  }
+
+  // Conversation style
+  if (meta?.conversation_style) {
+    const cs = meta.conversation_style;
+    const items = [];
+    const verbIcons = { low: '\uD83E\uDD10', medium: '\uD83D\uDDE3\uFE0F', high: '\uD83D\uDCAC' };
+    items.push(`<span class="conv-style-item">${verbIcons[cs.verbosity] || '\uD83D\uDDE3\uFE0F'} ${cs.verbosity}</span>`);
+    items.push(`<span class="conv-style-item">${cs.formality === 'formal' ? '\uD83C\uDFA9' : '\uD83D\uDE0E'} ${cs.formality}</span>`);
+    if (cs.asks_questions) items.push('<span class="conv-style-item">\u2753 Pose des questions</span>');
+    if (cs.expresses_frustration) items.push('<span class="conv-style-item">\uD83D\uDE24 Exprime frustration</span>');
+    if (cs.changes_mind) items.push('<span class="conv-style-item">\uD83D\uDD04 Change d\'avis</span>');
+    html += `<div class="section-label">Style de conversation</div><div class="conv-style-grid">${items.join('')}</div>`;
+  }
+
+  // Travel profile
+  if (meta?.travel_profile) {
+    const tp = meta.travel_profile;
+    html += `<div class="section-label">Profil de voyage</div><div class="travel-detail-grid">`;
+    html += `<div class="travel-detail-item"><div class="td-label">Groupe</div><div class="td-value">${esc(tp.group_type)}</div></div>`;
+    if (tp.travelers) {
+      const tv = tp.travelers;
+      const parts = [];
+      if (tv.adults) parts.push(`${tv.adults} adulte${tv.adults > 1 ? 's' : ''}`);
+      if (tv.children) parts.push(`${tv.children} enfant${tv.children > 1 ? 's' : ''}`);
+      if (tv.infants) parts.push(`${tv.infants} b\u00E9b\u00E9${tv.infants > 1 ? 's' : ''}`);
+      html += `<div class="travel-detail-item"><div class="td-label">Voyageurs</div><div class="td-value">${parts.join(', ')}</div></div>`;
+    }
+    html += `<div class="travel-detail-item"><div class="td-label">Budget</div><div class="td-value">${esc(tp.budget_range)}</div></div>`;
+    html += `<div class="travel-detail-item"><div class="td-label">Type</div><div class="td-value">${esc(tp.trip_type)}</div></div>`;
+    if (tp.flexibility) html += `<div class="travel-detail-item"><div class="td-label">Flexibilit\u00E9</div><div class="td-value">${esc(tp.flexibility)}</div></div>`;
+    if (tp.preferred_month) html += `<div class="travel-detail-item"><div class="td-label">Mois pr\u00E9f\u00E9r\u00E9</div><div class="td-value">${esc(tp.preferred_month)}</div></div>`;
+    if (tp.trip_duration) html += `<div class="travel-detail-item"><div class="td-label">Dur\u00E9e</div><div class="td-value">${esc(tp.trip_duration)}</div></div>`;
+    html += '</div>';
+    if (tp.preferred_destinations?.length) {
+      html += `<div style="margin-top:6px"><div class="td-label" style="font-size:10px;color:var(--text3);text-transform:uppercase">Destinations pr\u00E9f\u00E9r\u00E9es</div><div class="pills">${tp.preferred_destinations.map(d => `<span class="pill" style="border:1px solid var(--green);color:var(--green)">${esc(d)}</span>`).join('')}</div></div>`;
+    }
+    if (tp.avoided?.length) {
+      html += `<div style="margin-top:4px"><div class="td-label" style="font-size:10px;color:var(--text3);text-transform:uppercase">\u00C0 \u00E9viter</div><div class="pills">${tp.avoided.map(d => `<span class="pill" style="border:1px solid var(--red);color:var(--red)">${esc(d)}</span>`).join('')}</div></div>`;
+    }
+  }
+
+  // Conversation goals
+  if (meta?.conversation_goals?.length) {
+    const phasesReached = rd?.execution?.phases_reached || [];
+    const isDone = p.status === 'completed' || p.status === 'timeout' || p.status === 'failed';
+    html += `<div class="section-label">Objectifs de conversation</div><div class="goals-timeline">`;
+    meta.conversation_goals.forEach(g => {
+      if (g.phase === 'send_logs') return;
+      const reached = phasesReached.includes(g.phase);
+      const indicator = isDone ? (reached ? '\u2705' : '\u274C') : '\u23F3';
+      html += `<div class="goal-row">
+        <span class="goal-indicator">${indicator}</span>
+        <span class="goal-phase">${esc(g.phase)}</span>
+        <div class="goal-desc">${esc(g.goal?.substring(0, 120) || '')}${g.goal?.length > 120 ? '...' : ''}
+          ${g.widget_interactions?.length ? `<div class="goal-widgets">${g.widget_interactions.map(w => `<span class="goal-widget-pill">${esc(w.split(':')[0].trim())}</span>`).join('')}</div>` : ''}
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // Weight overrides
+  if (meta?.evaluation_weight_overrides && Object.keys(meta.evaluation_weight_overrides).length) {
+    html += `<div class="section-label">Pond\u00E9rations d'\u00E9valuation</div><div class="weight-badges">`;
+    for (const [axis, weight] of Object.entries(meta.evaluation_weight_overrides)) {
+      html += `<span class="weight-badge">${axis.replace(/_/g, ' ')} x${weight}</span>`;
+    }
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
 }
 
-// --- Section 2: Error/Blockage Panel ---
+// ---------------------------------------------------------------------------
+// Section 2: Error/Blockage Panel
+// ---------------------------------------------------------------------------
 function renderErrorPanel(p) {
   if (p.status !== 'failed' && p.status !== 'timeout') return '';
 
@@ -513,7 +666,9 @@ function renderErrorPanel(p) {
   </div>`;
 }
 
-// --- Section 3: Loop Alert ---
+// ---------------------------------------------------------------------------
+// Section 3: Loop Alert
+// ---------------------------------------------------------------------------
 function renderLoopAlert(p) {
   if (!p.loops || p.loops.length === 0) return '';
   const latest = p.loops[p.loops.length - 1];
@@ -528,7 +683,9 @@ function renderLoopAlert(p) {
   </div>`;
 }
 
-// --- Section 4: Stage Timeline ---
+// ---------------------------------------------------------------------------
+// Section 4: Stage Timeline
+// ---------------------------------------------------------------------------
 function renderStageTimeline(personaId, currentStage, status) {
   const stageTimestamps = {};
   state.events_log.forEach(e => {
@@ -536,57 +693,83 @@ function renderStageTimeline(personaId, currentStage, status) {
       stageTimestamps[e.stage] = e.timestamp;
     }
   });
-
   const currentIdx = STAGES.findIndex(s => s.key === currentStage);
-
   const stagesHtml = STAGES.map((s, i) => {
     let cls = 'stage';
-    if (status === 'completed') {
-      cls += ' done';
-    } else if (status === 'failed' || status === 'timeout') {
+    if (status === 'completed') cls += ' done';
+    else if (status === 'failed' || status === 'timeout') {
       if (i < currentIdx) cls += ' done';
       else if (i === currentIdx) cls += status === 'failed' ? ' failed-stage' : ' done';
     } else {
       if (i < currentIdx) cls += ' done';
       else if (i === currentIdx) cls += ' active';
     }
-
     const ts = stageTimestamps[s.key];
     const timeStr = ts ? new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
-
     return `<div class="${cls}" title="${s.label}${timeStr ? ' at ' + timeStr : ''}">
       <div>${s.label}</div>
       ${timeStr ? `<div class="stage-time">${timeStr}</div>` : ''}
     </div>`;
   }).join('');
-
   return `<div class="card"><h3>Pipeline Progress</h3><div class="stages">${stagesHtml}</div></div>`;
 }
 
-// --- Section 5: Live Step Progress ---
+// ---------------------------------------------------------------------------
+// Section 5: Live Step Progress (Enhanced)
+// ---------------------------------------------------------------------------
 function renderStepProgress(p) {
   if (p.status !== 'running' || !p.current_step) return '';
 
   const pct = p.max_steps ? Math.round((p.current_step / p.max_steps) * 100) : 0;
   const recentSteps = (p.step_history || []).slice(-5);
 
-  return `<div class="card">
+  let html = `<div class="card">
     <h3>Agent Progress</h3>
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-      <div style="font-size:32px;font-weight:700;color:var(--accent)">${p.current_step}</div>
-      <div>
-        <div style="font-size:12px;color:var(--text3)">of ${p.max_steps || '?'} steps</div>
-        <div class="score-bar-bg" style="width:200px;margin-top:4px">
+      <div style="font-size:36px;font-weight:700;color:var(--accent)">${p.current_step}<span style="font-size:18px;color:var(--text3)">/${p.max_steps || '?'}</span></div>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px">
+          <span>Steps</span><span>${pct}%</span>
+        </div>
+        <div class="score-bar-bg" style="height:10px">
           <div class="score-bar" style="width:${pct}%;background:var(--accent)"></div>
         </div>
       </div>
-      ${p.current_url ? `<div style="margin-left:auto;font-size:11px;color:var(--text3);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.current_url)}">${esc(p.current_url)}</div>` : ''}
-    </div>
-    ${recentSteps.length ? `<div style="font-size:11px;color:var(--text3)">Recent: ${recentSteps.map(s => (s.actions || []).join(', ')).filter(Boolean).join(' \u2192 ')}</div>` : ''}
-  </div>`;
+    </div>`;
+
+  if (p.current_url) {
+    html += `<div style="margin-bottom:8px;padding:6px 10px;background:var(--bg);border-radius:var(--radius);font-family:monospace;font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.current_url)}">\uD83C\uDF10 ${esc(p.current_url)}</div>`;
+  }
+
+  if (recentSteps.length) {
+    html += '<div class="live-actions-feed">';
+    recentSteps.forEach(s => {
+      const actionStr = (s.actions || []).join(', ') || 'waiting...';
+      html += `<div class="live-action-row">
+        <span class="live-action-step">#${s.step}</span>
+        <span class="live-action-name">${esc(actionStr)}</span>
+        ${s.url ? `<span class="live-action-url" title="${esc(s.url)}">${esc(s.url)}</span>` : ''}
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  if (p.current_thinking) {
+    html += `<div class="thinking-snippet">\uD83E\uDDE0 ${esc(p.current_thinking)}</div>`;
+  }
+
+  if (p.loops?.length) {
+    const latest = p.loops[p.loops.length - 1];
+    html += `<div style="margin-top:8px;padding:6px 10px;background:rgba(168,85,247,0.1);border-radius:var(--radius);font-size:12px;color:var(--purple)">\u26A0 Loop: ${esc(latest.pattern || '')} (${p.loops.length} total)</div>`;
+  }
+
+  html += '</div>';
+  return html;
 }
 
-// --- Section 6: Execution Stats ---
+// ---------------------------------------------------------------------------
+// Section 6: Execution Stats
+// ---------------------------------------------------------------------------
 function renderExecutionStats(p) {
   const rd = p.result_data;
   if (!rd?.execution) return '';
@@ -604,9 +787,28 @@ function renderExecutionStats(p) {
   </div>`;
 }
 
-// --- Section 7: Evaluation Card ---
+// ---------------------------------------------------------------------------
+// Score helpers (backward compat: flat number OR {score, justification})
+// ---------------------------------------------------------------------------
+function getScore(scores, axis) {
+  const v = scores[axis];
+  if (v == null) return 0;
+  if (typeof v === 'number') return v;
+  if (typeof v === 'object') return v.score || 0;
+  return 0;
+}
+function getJustification(scores, axis) {
+  const v = scores[axis];
+  if (v && typeof v === 'object') return v.justification || '';
+  return '';
+}
+
+// ---------------------------------------------------------------------------
+// Section 7: Evaluation Card (Scores + Radar)
+// ---------------------------------------------------------------------------
 function renderEvaluationCard(rd) {
   const scores = rd.evaluation.scores || {};
+
   return `<div class="card">
     <h3>Evaluation Scores</h3>
     <div class="scores-layout">
@@ -619,23 +821,96 @@ function renderEvaluationCard(rd) {
       </div>
       <div>
         ${AXES.map(ax => {
-          const v = scores[ax] || 0;
+          const v = getScore(scores, ax);
           return `<div class="score-row">
             <span class="axis">${ax.replace(/_/g, ' ')}</span>
             <div class="score-bar-bg"><div class="score-bar" style="width:${v*10}%;background:${scoreColor(v)}"></div></div>
             <span class="val" style="color:${scoreColor(v)}">${v.toFixed(1)}</span>
           </div>`;
         }).join('')}
-        ${rd.evaluation.strengths?.length ? `<h4 style="margin-top:16px;font-size:12px;color:var(--green)">Strengths</h4><ul class="detail-list strengths">${rd.evaluation.strengths.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
-        ${rd.evaluation.frustration_points?.length ? `<h4 style="margin-top:12px;font-size:12px;color:var(--red)">Frustrations</h4><ul class="detail-list frustrations">${rd.evaluation.frustration_points.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
-        ${rd.evaluation.improvement_suggestions?.length ? `<h4 style="margin-top:12px;font-size:12px;color:var(--accent)">Suggestions</h4><ul class="detail-list suggestions">${rd.evaluation.improvement_suggestions.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
-        ${rd.evaluation.summary ? `<h4 style="margin-top:16px;font-size:12px;color:var(--purple)">Ressenti Humain</h4><div style="margin-top:4px;font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap">${esc(rd.evaluation.summary)}</div>` : ''}
       </div>
     </div>
   </div>`;
 }
 
-// --- Section 8: Conversation Log ---
+// ---------------------------------------------------------------------------
+// Section 8: Feedback (Retour d'experience)
+// ---------------------------------------------------------------------------
+function renderFeedback(rd) {
+  const scores = rd.evaluation?.scores || {};
+  const hasJustifications = AXES.some(ax => getJustification(scores, ax));
+  const personaName = rd.persona?.name || 'Persona';
+  const meta = personaMetadata[rd.persona?.id];
+
+  let html = `<div class="card">
+    <h3 style="color:var(--purple)">Retour d'exp\u00E9rience de ${esc(personaName)}</h3>`;
+
+  // Evaluation summary (Ressenti Humain)
+  if (rd.evaluation.summary) {
+    html += `<div style="margin-bottom:16px;padding:14px;background:var(--bg);border-radius:var(--radius);border-left:3px solid var(--purple);font-size:14px;color:var(--text);line-height:1.7;white-space:pre-wrap">${esc(rd.evaluation.summary)}</div>`;
+  }
+
+  // Phase completion comparison
+  const phasesReached = rd.execution?.phases_reached || [];
+  if (meta?.conversation_goals?.length) {
+    html += `<h4 style="color:var(--text3);margin-top:12px">Phases compl\u00E9t\u00E9es</h4><div class="phase-comparison">`;
+    meta.conversation_goals.forEach(g => {
+      if (g.phase === 'send_logs') return;
+      const reached = phasesReached.includes(g.phase);
+      html += `<span class="phase-chip ${reached ? 'reached' : 'missed'}" title="${esc(g.goal || '')}">${reached ? '\u2705' : '\u274C'} ${esc(g.phase)}</span>`;
+    });
+    html += '</div>';
+  }
+
+  // Per-axis justifications
+  if (hasJustifications) {
+    html += `<h4 style="color:var(--text3);margin-top:16px">Justifications par axe</h4>`;
+    AXES.forEach(ax => {
+      const v = getScore(scores, ax);
+      const just = getJustification(scores, ax);
+      if (!just) return;
+      html += `<div class="justification-card" style="border-left-color:${scoreColor(v)}">
+        <div class="axis-header">
+          <span class="axis-name">${ax.replace(/_/g, ' ')}</span>
+          <span class="axis-score" style="color:${scoreColor(v)}">${v.toFixed(1)}/10</span>
+        </div>
+        <div class="axis-text">${esc(just)}</div>
+      </div>`;
+    });
+  }
+
+  // Strengths / Frustrations / Suggestions
+  if (rd.evaluation.strengths?.length) {
+    html += `<h4 style="margin-top:16px;color:var(--green)">Points forts</h4><ul class="detail-list strengths">${rd.evaluation.strengths.map(s => `<li>${esc(s)}</li>`).join('')}</ul>`;
+  }
+  if (rd.evaluation.frustration_points?.length) {
+    html += `<h4 style="margin-top:12px;color:var(--red)">Frustrations</h4><ul class="detail-list frustrations">${rd.evaluation.frustration_points.map(s => `<li>${esc(s)}</li>`).join('')}</ul>`;
+  }
+  if (rd.evaluation.improvement_suggestions?.length) {
+    html += `<h4 style="margin-top:12px;color:var(--accent)">Suggestions d'am\u00E9lioration</h4><ul class="detail-list suggestions">${rd.evaluation.improvement_suggestions.map(s => `<li>${esc(s)}</li>`).join('')}</ul>`;
+  }
+
+  html += '</div>';
+
+  // Screenshots gallery
+  if (rd.logs?.screenshot_paths?.length) {
+    html += `<div class="card"><h3>Screenshots</h3><div class="screenshots-gallery">`;
+    rd.logs.screenshot_paths.forEach((sp, i) => {
+      const urlPath = '/screenshots/' + sp.replace(/^output[\\/]screenshots[\\/]/, '').replace(/\\/g, '/');
+      html += `<div class="screenshot-thumb" onclick="openScreenshot('${esc(urlPath)}')">
+        <img src="${urlPath}" alt="Step ${i}" loading="lazy" onerror="this.style.display='none'" />
+        <div class="screenshot-label">Step ${i}</div>
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+
+  return html;
+}
+
+// ---------------------------------------------------------------------------
+// Section 9: Conversation Log
+// ---------------------------------------------------------------------------
 function renderConversationLog(rd) {
   if (!rd?.logs?.conversation) return '';
   const conv = rd.logs.conversation;
@@ -648,7 +923,9 @@ function renderConversationLog(rd) {
   return renderCollapsible('Conversation Log', esc(text), 'convLog');
 }
 
-// --- Section 9: Agent Thoughts ---
+// ---------------------------------------------------------------------------
+// Section 10: Agent Thoughts
+// ---------------------------------------------------------------------------
 function renderAgentThoughts(rd) {
   if (!rd?.logs?.agent_thoughts?.length) return '';
   const text = rd.logs.agent_thoughts.map((t, i) => `[Thought ${i + 1}] ${t}`).join('\n\n');
@@ -670,12 +947,13 @@ function toggleCollapse(id) {
   const el = document.getElementById(id);
   const arrow = document.getElementById(id + '-arrow');
   if (!el) return;
-  const isOpen = el.classList.contains('open');
   el.classList.toggle('open');
   if (arrow) arrow.classList.toggle('open');
 }
 
-// --- Event Log ---
+// ---------------------------------------------------------------------------
+// Event Log
+// ---------------------------------------------------------------------------
 function renderEventLog() {
   const events = (selectedPersona
     ? state.events_log.filter(e => (!e.persona_id || e.persona_id === selectedPersona) && e.type !== 'agent_step')
@@ -713,7 +991,7 @@ function renderFooter() {
 }
 
 // ---------------------------------------------------------------------------
-// Radar Chart (Canvas)
+// Radar Chart (Canvas) — handles both flat and {score,justification} formats
 // ---------------------------------------------------------------------------
 function drawRadar(canvas, scores) {
   const ctx = canvas.getContext('2d');
@@ -722,6 +1000,8 @@ function drawRadar(canvas, scores) {
   const radius = Math.min(cx, cy) - 35;
   const angleStep = (2 * Math.PI) / n;
   const maxScore = 10;
+
+  function getVal(axis) { return getScore(scores, axis); }
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -759,7 +1039,7 @@ function drawRadar(canvas, scores) {
   ctx.beginPath();
   AXES.forEach((axis, i) => {
     const angle = i * angleStep - Math.PI / 2;
-    const val = scores[axis] || 0;
+    const val = getVal(axis);
     const r = (val / maxScore) * radius;
     const x = cx + r * Math.cos(angle), y = cy + r * Math.sin(angle);
     i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
@@ -773,13 +1053,24 @@ function drawRadar(canvas, scores) {
 
   AXES.forEach((axis, i) => {
     const angle = i * angleStep - Math.PI / 2;
-    const val = scores[axis] || 0;
+    const val = getVal(axis);
     const r = (val / maxScore) * radius;
     ctx.beginPath();
     ctx.arc(cx + r * Math.cos(angle), cy + r * Math.sin(angle), 3.5, 0, 2 * Math.PI);
     ctx.fillStyle = '#3b82f6';
     ctx.fill();
   });
+}
+
+// ---------------------------------------------------------------------------
+// Screenshot lightbox
+// ---------------------------------------------------------------------------
+function openScreenshot(url) {
+  const lb = document.createElement('div');
+  lb.className = 'screenshot-lightbox';
+  lb.onclick = () => lb.remove();
+  lb.innerHTML = `<img src="${url}" />`;
+  document.body.appendChild(lb);
 }
 
 // ---------------------------------------------------------------------------
