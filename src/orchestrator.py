@@ -6,9 +6,19 @@ import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
 
+from openai import APIStatusError, AzureOpenAI
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+    before_sleep_log,
+)
+
 from .agent_factory import create_agent
-from .config import Settings, load_yaml_config
+from .config import Settings
 from .evaluator import evaluate_run
+from .events import DashboardEvent, EventType, get_event_bus
 from .models import RunStatus, TestRunResult
 from .persona_loader import PersonaDefinition, load_all_personas, load_persona
 from .report_writer import write_report
@@ -22,6 +32,28 @@ def _log_banner(persona_id: str, message: str) -> None:
     logger.info("=" * 60)
     logger.info(f"[{persona_id}] {message}")
     logger.info("=" * 60)
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=10, min=10, max=60),
+    retry=retry_if_exception_type((APIStatusError, ConnectionError)),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+    reraise=True,
+)
+def _check_azure_health(settings: Settings) -> bool:
+    """Lightweight Azure OpenAI connectivity check with retry."""
+    client = AzureOpenAI(
+        azure_endpoint=settings.azure_openai_endpoint,
+        api_key=settings.azure_openai_api_key,
+        api_version=settings.azure_openai_api_version,
+    )
+    client.chat.completions.create(
+        model=settings.azure_openai_deployment,
+        messages=[{"role": "user", "content": "ping"}],
+        max_tokens=5,
+    )
+    return True
 
 
 async def run_single_persona(
@@ -60,9 +92,39 @@ async def run_single_persona(
     agent = None
     browser = None
 
+    bus = get_event_bus()
+
     try:
+        # --- Step 0: Azure health check ---
+        logger.info(f"[{persona.id}] [0/5] Checking Azure OpenAI connectivity...")
+        if bus:
+            await bus.emit(DashboardEvent(
+                type=EventType.STAGE_HEALTH_CHECK, persona_id=persona.id,
+                batch_id=batch_id, stage="0/5",
+                data={"message": "Checking Azure OpenAI connectivity"},
+            ))
+        try:
+            _check_azure_health(settings)
+            logger.info(f"[{persona.id}]   Azure health check PASSED")
+        except Exception as e:
+            logger.error(f"[{persona.id}]   Azure health check FAILED after retries: {e}")
+            result.status = RunStatus.FAILED
+            result.error_message = f"Azure health check failed: {e}"
+            if bus:
+                await bus.emit(DashboardEvent(
+                    type=EventType.PERSONA_FAILED, persona_id=persona.id,
+                    batch_id=batch_id, data={"error": str(e), "stage": "0/5"},
+                ))
+            return result
+
         # --- Step 1: Create agent ---
         logger.info(f"[{persona.id}] [1/5] Creating browser-use agent...")
+        if bus:
+            await bus.emit(DashboardEvent(
+                type=EventType.STAGE_CREATE_AGENT, persona_id=persona.id,
+                batch_id=batch_id, stage="1/5",
+                data={"message": "Creating browser-use agent"},
+            ))
         logger.info(f"[{persona.id}]   Browser headless: {yaml_config.get('browser', {}).get('headless', False)}")
         logger.info(f"[{persona.id}]   Window: {yaml_config.get('browser', {}).get('window_width', 1440)}x{yaml_config.get('browser', {}).get('window_height', 900)}")
         agent, browser = create_agent(persona, settings, yaml_config)
@@ -75,6 +137,12 @@ async def run_single_persona(
 
         # --- Step 2: Run agent ---
         logger.info(f"[{persona.id}] [2/5] Running agent (max_steps={max_steps}, timeout={timeout}s)...")
+        if bus:
+            await bus.emit(DashboardEvent(
+                type=EventType.STAGE_RUN_AGENT, persona_id=persona.id,
+                batch_id=batch_id, stage="2/5",
+                data={"max_steps": max_steps, "timeout": timeout, "message": "Running agent"},
+            ))
         logger.info(f"[{persona.id}]   Target URL: {yaml_config.get('target', {}).get('planner_url_clean', 'N/A')}")
         logger.info(f"[{persona.id}]   Waiting for agent to navigate, chat, and interact with widgets...")
 
@@ -85,6 +153,12 @@ async def run_single_persona(
 
         # --- Step 3: Extract results ---
         logger.info(f"[{persona.id}] [3/5] Agent finished. Extracting results...")
+        if bus:
+            await bus.emit(DashboardEvent(
+                type=EventType.STAGE_EXTRACT_RESULTS, persona_id=persona.id,
+                batch_id=batch_id, stage="3/5",
+                data={"message": "Extracting results"},
+            ))
 
         result.total_steps = len(history.model_actions())
         logger.info(f"[{persona.id}]   Total steps taken: {result.total_steps}")
@@ -141,12 +215,22 @@ async def run_single_persona(
         timeout_val = yaml_config.get('orchestration', {}).get('timeout_per_persona_seconds', 600)
         result.error_message = f"Timed out after {timeout_val}s"
         _log_banner(persona.id, f"TIMEOUT after {timeout_val}s")
+        if bus:
+            await bus.emit(DashboardEvent(
+                type=EventType.PERSONA_TIMEOUT, persona_id=persona.id,
+                batch_id=batch_id, data={"error": result.error_message},
+            ))
 
     except Exception as e:
         result.status = RunStatus.FAILED
         result.error_message = str(e)
         logger.error(f"[{persona.id}] FAILED with error: {type(e).__name__}: {e}")
         logger.exception(f"[{persona.id}] Full traceback:")
+        if bus:
+            await bus.emit(DashboardEvent(
+                type=EventType.PERSONA_FAILED, persona_id=persona.id,
+                batch_id=batch_id, data={"error": str(e)},
+            ))
 
     finally:
         result.finished_at = datetime.now(timezone.utc)
@@ -161,9 +245,20 @@ async def run_single_persona(
                 logger.warning(f"[{persona.id}]   Agent close error: {e}")
 
     # --- Step 4: Evaluate ---
-    if result.status == RunStatus.COMPLETED:
+    should_evaluate = (
+        result.status == RunStatus.COMPLETED
+        or (result.status == RunStatus.TIMEOUT and result.phases_reached)
+    )
+    if should_evaluate:
         try:
-            logger.info(f"[{persona.id}] [4/5] Running LLM evaluation (9 axes)...")
+            label = "partial (timeout)" if result.status == RunStatus.TIMEOUT else "full"
+            logger.info(f"[{persona.id}] [4/5] Running {label} LLM evaluation (9 axes)...")
+            if bus:
+                await bus.emit(DashboardEvent(
+                    type=EventType.STAGE_EVALUATE, persona_id=persona.id,
+                    batch_id=batch_id, stage="4/5",
+                    data={"message": f"Running {label} evaluation"},
+                ))
             evaluation = await evaluate_run(result, persona, settings, yaml_config)
             result.merge_evaluation(evaluation)
             logger.info(f"[{persona.id}]   Overall score: {result.score_overall}/10")
@@ -174,15 +269,28 @@ async def run_single_persona(
         except Exception as e:
             logger.error(f"[{persona.id}]   Evaluation FAILED: {type(e).__name__}: {e}")
     else:
-        logger.info(f"[{persona.id}] [4/5] Skipping evaluation (status={result.status.value})")
+        logger.info(f"[{persona.id}] [4/5] Skipping evaluation (status={result.status.value}, phases={result.phases_reached})")
 
     # --- Step 5: Write report ---
     try:
         logger.info(f"[{persona.id}] [5/5] Writing JSON report...")
+        if bus:
+            await bus.emit(DashboardEvent(
+                type=EventType.STAGE_WRITE_REPORT, persona_id=persona.id,
+                batch_id=batch_id, stage="5/5",
+                data={"message": "Writing JSON report"},
+            ))
         report_path = write_report(result)
         logger.info(f"[{persona.id}]   Report: {report_path}")
     except Exception as e:
         logger.error(f"[{persona.id}]   Report write FAILED: {e}")
+
+    # Emit final persona result event
+    if bus and result.status == RunStatus.COMPLETED:
+        await bus.emit(DashboardEvent(
+            type=EventType.PERSONA_COMPLETED, persona_id=persona.id,
+            batch_id=batch_id, data=result.to_json_dict(),
+        ))
 
     _log_banner(persona.id, f"RUN FINISHED — status={result.status.value}, score={result.score_overall or 'N/A'}")
     return result
@@ -208,11 +316,30 @@ async def run_batch(
     logger.info(f"Total: {len(personas)} personas to run sequentially")
     logger.info("=" * 60)
 
+    bus = get_event_bus()
+    if bus:
+        await bus.emit(DashboardEvent(
+            type=EventType.BATCH_STARTED, batch_id=batch_id,
+            data={
+                "persona_ids": [p.id for p in personas],
+                "total": len(personas),
+            },
+        ))
+
+    cooldown = yaml_config.get("orchestration", {}).get(
+        "cooldown_between_personas_seconds", 30
+    )
+
     for i, persona in enumerate(personas, 1):
         logger.info(f"\n--- Batch progress: {i}/{len(personas)} ---")
         result = await run_single_persona(persona, settings, yaml_config, batch_id)
         results.append(result)
         logger.info(f"--- {persona.id}: {result.status.value} (score: {result.score_overall or 'N/A'}) ---\n")
+
+        # Cooldown between personas (skip after last one)
+        if i < len(personas) and cooldown > 0:
+            logger.info(f"Cooling down {cooldown}s before next persona...")
+            await asyncio.sleep(cooldown)
 
     # Batch summary
     logger.info("=" * 60)
@@ -220,10 +347,27 @@ async def run_batch(
     for r in results:
         logger.info(f"  {r.persona_id}: {r.status.value} | score={r.score_overall or 'N/A'} | phase={r.phase_furthest or 'none'} | {r.duration_seconds:.0f}s")
     completed = [r for r in results if r.score_overall is not None]
+    avg = None
     if completed:
         avg = sum(r.score_overall for r in completed) / len(completed)
         logger.info(f"  Average score: {avg:.1f}/10")
     logger.info("=" * 60)
+
+    if bus:
+        await bus.emit(DashboardEvent(
+            type=EventType.BATCH_COMPLETED, batch_id=batch_id,
+            data={
+                "total": len(results),
+                "completed": len(completed),
+                "average_score": round(avg, 1) if avg else None,
+                "summary": [
+                    {"persona_id": r.persona_id, "status": r.status.value,
+                     "score": r.score_overall, "phase": r.phase_furthest,
+                     "duration": r.duration_seconds}
+                    for r in results
+                ],
+            },
+        ))
 
     return results
 

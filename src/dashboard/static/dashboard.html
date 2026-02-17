@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Travliaq Testing Dashboard</title>
+<style>
+  :root {
+    --bg: #0f172a; --bg2: #1e293b; --bg3: #334155;
+    --text: #e2e8f0; --text2: #94a3b8; --text3: #64748b;
+    --accent: #3b82f6; --green: #22c55e; --red: #ef4444;
+    --yellow: #eab308; --purple: #a855f7;
+    --radius: 8px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+
+  /* Layout */
+  .app { display: grid; grid-template-rows: 56px 1fr 48px; height: 100vh; }
+  .header { background: var(--bg2); display: flex; align-items: center; padding: 0 20px; gap: 16px; border-bottom: 1px solid var(--bg3); }
+  .header h1 { font-size: 16px; font-weight: 600; }
+  .main { display: grid; grid-template-columns: 260px 1fr; overflow: hidden; }
+  .footer { background: var(--bg2); display: flex; align-items: center; padding: 0 20px; gap: 24px; font-size: 13px; color: var(--text2); border-top: 1px solid var(--bg3); }
+
+  /* Header badges */
+  .badge { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .badge-idle { background: var(--bg3); color: var(--text2); }
+  .badge-running { background: #1e3a5f; color: var(--accent); animation: pulse 2s infinite; }
+  .badge-completed { background: #14532d; color: var(--green); }
+  .badge-failed { background: #450a0a; color: var(--red); }
+  .badge-timeout { background: #422006; color: var(--yellow); }
+  .badge-pending { background: var(--bg3); color: var(--text3); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+  .elapsed { margin-left: auto; font-size: 13px; color: var(--text2); font-variant-numeric: tabular-nums; }
+
+  /* Sidebar */
+  .sidebar { background: var(--bg2); border-right: 1px solid var(--bg3); overflow-y: auto; padding: 12px; }
+  .sidebar h2 { font-size: 12px; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; letter-spacing: 0.5px; }
+  .persona-card { padding: 10px 12px; border-radius: var(--radius); cursor: pointer; margin-bottom: 4px; transition: background 0.15s; display: flex; align-items: center; gap: 10px; }
+  .persona-card:hover { background: var(--bg3); }
+  .persona-card.active { background: var(--bg3); border-left: 3px solid var(--accent); }
+  .persona-icon { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .persona-icon.pending { background: var(--text3); }
+  .persona-icon.running { background: var(--accent); animation: pulse 1.5s infinite; }
+  .persona-icon.completed { background: var(--green); }
+  .persona-icon.failed { background: var(--red); }
+  .persona-icon.timeout { background: var(--yellow); }
+  .persona-info { flex: 1; min-width: 0; }
+  .persona-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .persona-meta { font-size: 11px; color: var(--text3); }
+  .persona-score { font-size: 14px; font-weight: 700; }
+  .score-good { color: var(--green); }
+  .score-mid { color: var(--yellow); }
+  .score-bad { color: var(--red); }
+
+  /* Main panel */
+  .panel { overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* Cards */
+  .card { background: var(--bg2); border-radius: var(--radius); padding: 16px; border: 1px solid var(--bg3); }
+  .card h3 { font-size: 13px; text-transform: uppercase; color: var(--text3); margin-bottom: 12px; letter-spacing: 0.5px; }
+
+  /* Active run monitor */
+  .run-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .run-header .name { font-size: 18px; font-weight: 600; }
+  .run-header .lang { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: var(--bg3); color: var(--text2); }
+
+  /* Stage progress bar */
+  .stages { display: flex; gap: 4px; margin-bottom: 16px; }
+  .stage { flex: 1; height: 32px; border-radius: 4px; background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text3); transition: all 0.3s; }
+  .stage.done { background: #14532d; color: var(--green); }
+  .stage.active { background: #1e3a5f; color: var(--accent); animation: pulse 2s infinite; }
+
+  /* Metadata grid */
+  .meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+  .meta-item { }
+  .meta-label { font-size: 11px; color: var(--text3); text-transform: uppercase; }
+  .meta-value { font-size: 14px; font-weight: 500; margin-top: 2px; }
+
+  /* Pills */
+  .pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .pill { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--bg3); color: var(--text2); }
+
+  /* Scores */
+  .scores-layout { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
+  @media (max-width: 900px) { .scores-layout { grid-template-columns: 1fr; } }
+  .overall-score { text-align: center; margin-bottom: 12px; }
+  .overall-score .number { font-size: 48px; font-weight: 700; }
+  .overall-score .label { font-size: 12px; color: var(--text3); }
+  canvas#radar { display: block; margin: 0 auto; }
+  .scores-details { }
+  .score-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .score-row .axis { font-size: 12px; color: var(--text2); width: 140px; text-align: right; }
+  .score-bar-bg { flex: 1; height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+  .score-bar { height: 100%; border-radius: 4px; transition: width 0.5s; }
+  .score-row .val { font-size: 12px; width: 32px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* Lists */
+  .detail-list { margin-top: 8px; }
+  .detail-list li { font-size: 13px; color: var(--text2); margin-bottom: 4px; padding-left: 12px; position: relative; }
+  .detail-list li::before { content: ''; position: absolute; left: 0; top: 7px; width: 5px; height: 5px; border-radius: 50%; }
+  .detail-list.strengths li::before { background: var(--green); }
+  .detail-list.frustrations li::before { background: var(--red); }
+  .detail-list.suggestions li::before { background: var(--accent); }
+
+  /* Event log */
+  .event-log { max-height: 300px; overflow-y: auto; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 12px; }
+  .event-log .entry { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.03); display: flex; gap: 8px; }
+  .event-log .time { color: var(--text3); flex-shrink: 0; width: 65px; }
+  .event-log .persona { color: var(--accent); flex-shrink: 0; width: 120px; overflow: hidden; text-overflow: ellipsis; }
+  .event-log .msg { color: var(--text2); }
+  .event-log .msg.error { color: var(--red); }
+  .event-log .msg.success { color: var(--green); }
+
+  /* Empty states */
+  .empty { text-align: center; padding: 40px; color: var(--text3); }
+  .empty .icon { font-size: 48px; margin-bottom: 12px; }
+
+  /* Results browser */
+  .results-table { width: 100%; border-collapse: collapse; }
+  .results-table th { font-size: 11px; text-transform: uppercase; color: var(--text3); text-align: left; padding: 8px; border-bottom: 1px solid var(--bg3); }
+  .results-table td { padding: 8px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; }
+  .results-table tr:hover td { background: var(--bg3); }
+
+  /* Reconnecting banner */
+  .reconnecting { display: none; background: var(--yellow); color: #000; text-align: center; padding: 4px; font-size: 12px; font-weight: 500; }
+  .reconnecting.show { display: block; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <h1>Travliaq Testing Dashboard</h1>
+    <span id="batchBadge" class="badge badge-idle">IDLE</span>
+    <span id="batchId" style="font-size:12px;color:var(--text3)"></span>
+    <div class="elapsed" id="elapsed"></div>
+  </div>
+
+  <div class="reconnecting" id="reconnecting">Reconnecting to server...</div>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <h2>Personas</h2>
+      <div id="personaList"></div>
+    </div>
+
+    <!-- Panel -->
+    <div class="panel" id="panel">
+      <div class="empty" id="emptyState">
+        <div class="icon">&#128640;</div>
+        <p>Waiting for batch to start...</p>
+        <p style="font-size:13px;margin-top:8px">Start with: <code>python cli.py dashboard --run-batch --headless</code></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span id="footerProgress">0/0 completed</span>
+    <span id="footerAvg"></span>
+    <span id="footerTime"></span>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+let state = { batch_id: null, status: 'idle', personas: {}, current_persona: null, current_stage: null, started_at: null, events_log: [] };
+let selectedPersona = null;
+let startedAt = null;
+let elapsedTimer = null;
+let resultCache = {};  // filename -> full result data
+
+const STAGES = [
+  { key: '0/5', label: 'Health' },
+  { key: '1/5', label: 'Agent' },
+  { key: '2/5', label: 'Run' },
+  { key: '3/5', label: 'Extract' },
+  { key: '4/5', label: 'Eval' },
+  { key: '5/5', label: 'Report' },
+];
+const AXES = ['fluidity','relevance','visual_clarity','error_handling','conversation_memory','widget_usability','map_interaction','response_speed','personality_match'];
+
+// ---------------------------------------------------------------------------
+// SSE Connection
+// ---------------------------------------------------------------------------
+let evtSource = null;
+function connectSSE() {
+  evtSource = new EventSource('/api/stream');
+  evtSource.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    document.getElementById('reconnecting').classList.remove('show');
+
+    if (data.type === 'state_snapshot') {
+      state = data.data;
+      if (state.started_at) startedAt = new Date(state.started_at);
+      renderAll();
+      return;
+    }
+
+    // Route events
+    const t = data.type;
+    if (t === 'batch_started') {
+      state.batch_id = data.batch_id;
+      state.status = 'running';
+      state.started_at = data.timestamp;
+      startedAt = new Date(data.timestamp);
+      startElapsedTimer();
+      const ids = data.data?.persona_ids || [];
+      ids.forEach(id => { state.personas[id] = { status: 'pending', stage: null }; });
+    } else if (t.startsWith('stage_')) {
+      state.current_persona = data.persona_id;
+      state.current_stage = data.stage;
+      if (data.persona_id && state.personas[data.persona_id]) {
+        state.personas[data.persona_id].status = 'running';
+        state.personas[data.persona_id].stage = data.stage;
+      }
+      if (!selectedPersona) selectedPersona = data.persona_id;
+    } else if (t === 'persona_completed') {
+      const d = data.data || {};
+      if (data.persona_id && state.personas[data.persona_id]) {
+        state.personas[data.persona_id] = {
+          status: 'completed', stage: '5/5',
+          score: d.evaluation?.overall_score,
+          phase_furthest: d.execution?.phase_furthest,
+          duration: d.timing?.duration_seconds,
+          result_data: d,
+        };
+      }
+    } else if (t === 'persona_failed') {
+      if (data.persona_id && state.personas[data.persona_id]) {
+        state.personas[data.persona_id] = { status: 'failed', error: data.data?.error, stage: data.data?.stage };
+      }
+    } else if (t === 'persona_timeout') {
+      if (data.persona_id && state.personas[data.persona_id]) {
+        state.personas[data.persona_id].status = 'timeout';
+        state.personas[data.persona_id].error = data.data?.error;
+      }
+    } else if (t === 'batch_completed') {
+      state.status = 'completed';
+      state.current_persona = null;
+      state.current_stage = null;
+      stopElapsedTimer();
+    }
+
+    // Append to events log
+    state.events_log.push(data);
+    if (state.events_log.length > 200) state.events_log = state.events_log.slice(-200);
+
+    renderAll();
+  };
+  evtSource.onerror = function() {
+    document.getElementById('reconnecting').classList.add('show');
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Elapsed timer
+// ---------------------------------------------------------------------------
+function startElapsedTimer() {
+  stopElapsedTimer();
+  elapsedTimer = setInterval(() => {
+    if (startedAt) {
+      const secs = Math.floor((Date.now() - startedAt.getTime()) / 1000);
+      document.getElementById('elapsed').textContent = formatDuration(secs);
+    }
+  }, 1000);
+}
+function stopElapsedTimer() { if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; } }
+function formatDuration(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+}
+
+// ---------------------------------------------------------------------------
+// Render
+// ---------------------------------------------------------------------------
+function renderAll() {
+  renderHeader();
+  renderSidebar();
+  renderPanel();
+  renderFooter();
+}
+
+function renderHeader() {
+  const badge = document.getElementById('batchBadge');
+  badge.className = `badge badge-${state.status}`;
+  badge.textContent = state.status.toUpperCase();
+  document.getElementById('batchId').textContent = state.batch_id || '';
+  if (state.status === 'running' && startedAt && !elapsedTimer) startElapsedTimer();
+}
+
+function renderSidebar() {
+  const list = document.getElementById('personaList');
+  const ids = Object.keys(state.personas);
+  if (ids.length === 0) { list.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">No personas loaded</div>'; return; }
+
+  list.innerHTML = ids.map(id => {
+    const p = state.personas[id];
+    const isActive = id === selectedPersona;
+    const scoreHtml = p.score != null ? `<span class="persona-score ${p.score >= 7 ? 'score-good' : p.score >= 5 ? 'score-mid' : 'score-bad'}">${p.score.toFixed(1)}</span>` : '';
+    const stageText = p.stage || '';
+    return `<div class="persona-card ${isActive ? 'active' : ''}" onclick="selectPersona('${id}')">
+      <div class="persona-icon ${p.status}"></div>
+      <div class="persona-info">
+        <div class="persona-name">${id.replace(/_/g, ' ')}</div>
+        <div class="persona-meta">${p.status}${stageText ? ' - ' + stageText : ''}</div>
+      </div>
+      ${scoreHtml}
+    </div>`;
+  }).join('');
+}
+
+function renderPanel() {
+  const panel = document.getElementById('panel');
+  const empty = document.getElementById('emptyState');
+
+  if (Object.keys(state.personas).length === 0 && state.status === 'idle') {
+    panel.innerHTML = '';
+    panel.appendChild(empty);
+    loadResultsBrowser(panel);
+    return;
+  }
+  if (empty.parentNode === panel) panel.removeChild(empty);
+
+  const sel = selectedPersona;
+  const p = sel ? state.personas[sel] : null;
+
+  let html = '';
+
+  // Active run monitor
+  if (p) {
+    html += `<div class="card">
+      <h3>Active Run</h3>
+      <div class="run-header">
+        <span class="name">${sel.replace(/_/g, ' ')}</span>
+        <span class="badge badge-${p.status}">${p.status}</span>
+      </div>
+      <div class="stages">${renderStages(p.stage, p.status)}</div>
+      <div class="meta-grid">
+        ${p.duration != null ? `<div class="meta-item"><div class="meta-label">Duration</div><div class="meta-value">${formatDuration(Math.floor(p.duration))}</div></div>` : ''}
+        ${p.phase_furthest ? `<div class="meta-item"><div class="meta-label">Furthest Phase</div><div class="meta-value">${p.phase_furthest}</div></div>` : ''}
+        ${p.error ? `<div class="meta-item"><div class="meta-label">Error</div><div class="meta-value" style="color:var(--red)">${truncate(p.error, 100)}</div></div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  // Scores (if persona has result data)
+  const rd = p?.result_data;
+  if (rd && rd.evaluation?.overall_score != null) {
+    const scores = rd.evaluation.scores || {};
+    html += `<div class="card">
+      <h3>Evaluation Scores</h3>
+      <div class="scores-layout">
+        <div>
+          <div class="overall-score">
+            <div class="number" style="color:${scoreColor(rd.evaluation.overall_score)}">${rd.evaluation.overall_score.toFixed(1)}</div>
+            <div class="label">Overall Score / 10</div>
+          </div>
+          <canvas id="radar" width="280" height="280"></canvas>
+        </div>
+        <div class="scores-details">
+          ${AXES.map(ax => {
+            const v = scores[ax] || 0;
+            return `<div class="score-row">
+              <span class="axis">${ax.replace(/_/g, ' ')}</span>
+              <div class="score-bar-bg"><div class="score-bar" style="width:${v*10}%;background:${scoreColor(v)}"></div></div>
+              <span class="val" style="color:${scoreColor(v)}">${v.toFixed(1)}</span>
+            </div>`;
+          }).join('')}
+          ${rd.evaluation.strengths?.length ? `<h4 style="margin-top:16px;font-size:12px;color:var(--green)">Strengths</h4><ul class="detail-list strengths">${rd.evaluation.strengths.map(s => `<li>${s}</li>`).join('')}</ul>` : ''}
+          ${rd.evaluation.frustration_points?.length ? `<h4 style="margin-top:12px;font-size:12px;color:var(--red)">Frustrations</h4><ul class="detail-list frustrations">${rd.evaluation.frustration_points.map(s => `<li>${s}</li>`).join('')}</ul>` : ''}
+          ${rd.evaluation.improvement_suggestions?.length ? `<h4 style="margin-top:12px;font-size:12px;color:var(--accent)">Suggestions</h4><ul class="detail-list suggestions">${rd.evaluation.improvement_suggestions.map(s => `<li>${s}</li>`).join('')}</ul>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // Event log
+  html += `<div class="card">
+    <h3>Event Log</h3>
+    <div class="event-log" id="eventLog">${renderEventLog()}</div>
+  </div>`;
+
+  panel.innerHTML = html;
+
+  // Draw radar chart if canvas exists
+  const canvas = document.getElementById('radar');
+  if (canvas && rd?.evaluation?.scores) {
+    drawRadar(canvas, rd.evaluation.scores);
+  }
+
+  // Auto-scroll event log
+  const logEl = document.getElementById('eventLog');
+  if (logEl) logEl.scrollTop = logEl.scrollHeight;
+}
+
+function renderStages(currentStage, status) {
+  const currentIdx = STAGES.findIndex(s => s.key === currentStage);
+  return STAGES.map((s, i) => {
+    let cls = 'stage';
+    if (status === 'completed' || status === 'failed' || status === 'timeout') {
+      cls += i <= currentIdx || status === 'completed' ? ' done' : '';
+    } else if (i < currentIdx) { cls += ' done'; }
+    else if (i === currentIdx) { cls += ' active'; }
+    return `<div class="${cls}">${s.label}</div>`;
+  }).join('');
+}
+
+function renderEventLog() {
+  const events = (selectedPersona
+    ? state.events_log.filter(e => !e.persona_id || e.persona_id === selectedPersona)
+    : state.events_log
+  ).slice(-50);
+
+  return events.map(e => {
+    const time = e.timestamp ? new Date(e.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+    const pid = e.persona_id || '';
+    const msg = e.data?.message || e.type?.replace(/_/g, ' ') || '';
+    const stage = e.stage ? `[${e.stage}] ` : '';
+    const cls = e.type?.includes('failed') || e.type?.includes('timeout') ? 'error' :
+                e.type?.includes('completed') ? 'success' : '';
+    return `<div class="entry"><span class="time">${time}</span><span class="persona">${pid}</span><span class="msg ${cls}">${stage}${msg}</span></div>`;
+  }).join('');
+}
+
+function renderFooter() {
+  const ids = Object.keys(state.personas);
+  const completed = ids.filter(id => state.personas[id].status === 'completed').length;
+  const failed = ids.filter(id => state.personas[id].status === 'failed').length;
+  const timeout = ids.filter(id => state.personas[id].status === 'timeout').length;
+
+  document.getElementById('footerProgress').textContent = `${completed}/${ids.length} completed` +
+    (failed ? ` | ${failed} failed` : '') + (timeout ? ` | ${timeout} timeout` : '');
+
+  const scores = ids.map(id => state.personas[id].score).filter(s => s != null);
+  if (scores.length) {
+    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+    document.getElementById('footerAvg').textContent = `Avg: ${avg.toFixed(1)}/10`;
+  } else {
+    document.getElementById('footerAvg').textContent = '';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Radar Chart (Canvas)
+// ---------------------------------------------------------------------------
+function drawRadar(canvas, scores) {
+  const ctx = canvas.getContext('2d');
+  const n = AXES.length;
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  const radius = Math.min(cx, cy) - 35;
+  const angleStep = (2 * Math.PI) / n;
+  const maxScore = 10;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Grid rings
+  for (let ring = 2; ring <= 10; ring += 2) {
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const angle = i * angleStep - Math.PI / 2;
+      const r = (ring / maxScore) * radius;
+      const x = cx + r * Math.cos(angle), y = cy + r * Math.sin(angle);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.stroke();
+  }
+
+  // Axis lines + labels
+  AXES.forEach((axis, i) => {
+    const angle = i * angleStep - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.stroke();
+    // Label
+    const lx = cx + (radius + 22) * Math.cos(angle);
+    const ly = cy + (radius + 22) * Math.sin(angle);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '9px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const label = axis.replace(/_/g, '\n').split('\n').map(w => w.charAt(0).toUpperCase() + w.slice(1));
+    label.forEach((line, li) => {
+      ctx.fillText(line, lx, ly + li * 10 - (label.length - 1) * 5);
+    });
+  });
+
+  // Data polygon
+  ctx.beginPath();
+  AXES.forEach((axis, i) => {
+    const angle = i * angleStep - Math.PI / 2;
+    const val = scores[axis] || 0;
+    const r = (val / maxScore) * radius;
+    const x = cx + r * Math.cos(angle), y = cy + r * Math.sin(angle);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(59, 130, 246, 0.15)';
+  ctx.fill();
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Data points
+  AXES.forEach((axis, i) => {
+    const angle = i * angleStep - Math.PI / 2;
+    const val = scores[axis] || 0;
+    const r = (val / maxScore) * radius;
+    ctx.beginPath();
+    ctx.arc(cx + r * Math.cos(angle), cy + r * Math.sin(angle), 3.5, 0, 2 * Math.PI);
+    ctx.fillStyle = '#3b82f6';
+    ctx.fill();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Results Browser (idle mode)
+// ---------------------------------------------------------------------------
+async function loadResultsBrowser(panel) {
+  try {
+    const res = await fetch('/api/results');
+    const results = await res.json();
+    if (!results.length) return;
+
+    let html = `<div class="card"><h3>Past Results</h3><table class="results-table">
+      <thead><tr><th>Persona</th><th>Status</th><th>Score</th><th>Phase</th><th>Duration</th><th>Date</th></tr></thead><tbody>`;
+    results.forEach(r => {
+      const sc = r.score != null ? r.score.toFixed(1) : '-';
+      const dur = r.duration != null ? formatDuration(Math.floor(r.duration)) : '-';
+      const date = r.started_at ? new Date(r.started_at).toLocaleDateString('fr-FR') : '-';
+      html += `<tr onclick="loadResult('${r.filename}')"><td>${r.persona_id || r.filename}</td><td><span class="badge badge-${r.status}">${r.status}</span></td><td>${sc}</td><td>${r.phase_furthest || '-'}</td><td>${dur}</td><td>${date}</td></tr>`;
+    });
+    html += '</tbody></table></div>';
+    panel.innerHTML += html;
+  } catch (e) { /* ignore */ }
+}
+
+async function loadResult(filename) {
+  if (resultCache[filename]) {
+    showResultDetail(resultCache[filename]);
+    return;
+  }
+  try {
+    const res = await fetch(`/api/results/${filename}`);
+    const data = await res.json();
+    resultCache[filename] = data;
+    showResultDetail(data);
+  } catch (e) { /* ignore */ }
+}
+
+function showResultDetail(data) {
+  // Inject as a "virtual" persona so the panel renderer can show it
+  const pid = data.persona?.id || 'unknown';
+  selectedPersona = pid;
+  state.personas[pid] = {
+    status: data.status || 'completed',
+    stage: '5/5',
+    score: data.evaluation?.overall_score,
+    phase_furthest: data.execution?.phase_furthest,
+    duration: data.timing?.duration_seconds,
+    result_data: data,
+  };
+  renderAll();
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+function selectPersona(id) { selectedPersona = id; renderAll(); }
+function scoreColor(v) { return v >= 7 ? 'var(--green)' : v >= 5 ? 'var(--yellow)' : 'var(--red)'; }
+function truncate(s, n) { return s && s.length > n ? s.slice(0, n) + '...' : s || ''; }
+
+// ---------------------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------------------
+connectSSE();
+// Also fetch initial batch status as fallback
+fetch('/api/batch/status').then(r => r.json()).then(d => {
+  if (d.batch_id || Object.keys(d.personas || {}).length) {
+    state = d;
+    if (state.started_at) { startedAt = new Date(state.started_at); startElapsedTimer(); }
+    renderAll();
+  }
+}).catch(() => {});
+</script>
+</body>
+</html>

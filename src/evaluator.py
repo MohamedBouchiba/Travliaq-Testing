@@ -4,7 +4,14 @@ import json
 import logging
 from typing import Any, Dict
 
-from openai import AzureOpenAI
+from openai import APIStatusError, AzureOpenAI
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+    before_sleep_log,
+)
 
 from .config import Settings
 from .models import TestRunResult
@@ -156,15 +163,25 @@ async def evaluate_run(
 
     logger.info(f"[{persona.id}] Running evaluation LLM call...")
 
-    response = client.chat.completions.create(
-        model=settings.azure_openai_deployment,
-        messages=[
-            {"role": "system", "content": EVALUATION_SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-        temperature=temperature,
-        response_format={"type": "json_object"},
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=5, min=5, max=45),
+        retry=retry_if_exception_type((APIStatusError, ConnectionError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        reraise=True,
     )
+    def _call_eval_llm():
+        return client.chat.completions.create(
+            model=settings.azure_openai_deployment,
+            messages=[
+                {"role": "system", "content": EVALUATION_SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=temperature,
+            response_format={"type": "json_object"},
+        )
+
+    response = _call_eval_llm()
 
     raw_content = response.choices[0].message.content
     evaluation = json.loads(raw_content)

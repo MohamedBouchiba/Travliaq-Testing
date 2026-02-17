@@ -14,7 +14,7 @@ agent:
   max_steps: 100
   max_actions_per_step: 3
   max_failures: 8
-  retry_delay: 5
+  retry_delay: 10
   use_vision: true
   step_timeout: 180
 
@@ -23,3 +23,8 @@ evaluation:
 
 orchestration:
   timeout_per_persona_seconds: 900
+  cooldown_between_personas_seconds: 30
+
+dashboard:
+  port: 8099
+  host: "0.0.0.0"

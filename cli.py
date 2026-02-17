@@ -125,6 +125,73 @@ def list_personas():
     console.print(table)
 
 
+@cli.command()
+@click.option("--port", default=8099, help="Dashboard server port")
+@click.option("--host", default="0.0.0.0", help="Dashboard server host")
+@click.option("--no-browser", is_flag=True, help="Don't auto-open browser")
+@click.option("--run-batch", is_flag=True, help="Start a batch run alongside the dashboard")
+@click.option("--personas", default=None, help="Comma-separated persona IDs (with --run-batch)")
+@click.option("--headless/--no-headless", default=False, help="Run browser in headless mode (with --run-batch)")
+def dashboard(port: int, host: str, no_browser: bool, run_batch: bool, personas: str | None, headless: bool):
+    """Start the monitoring dashboard web server.
+
+    Examples:
+
+      python cli.py dashboard
+
+      python cli.py dashboard --run-batch --headless
+
+      python cli.py dashboard --run-batch --personas family_with_kids,budget_backpacker --headless
+    """
+    import threading
+    import webbrowser
+
+    import uvicorn
+
+    from src.config import Settings, load_yaml_config
+    from src.events import EventBus, set_event_bus
+    from src.dashboard.server import app
+    from src.utils import setup_logging
+
+    settings = Settings()
+    yaml_config = load_yaml_config()
+    setup_logging(settings.log_level)
+
+    # Read port/host from config if available
+    dash_cfg = yaml_config.get("dashboard", {})
+    port = dash_cfg.get("port", port)
+    host = dash_cfg.get("host", host)
+
+    # Set up event bus
+    bus = EventBus()
+    set_event_bus(bus)
+
+    if not no_browser:
+        threading.Timer(1.5, lambda: webbrowser.open(f"http://localhost:{port}")).start()
+
+    if run_batch:
+        from src.orchestrator import run_batch as _run_batch
+
+        if headless:
+            yaml_config["browser"]["headless"] = True
+
+        persona_ids = personas.split(",") if personas else None
+
+        @app.on_event("startup")
+        async def _start_batch():
+            import asyncio
+            asyncio.create_task(_run_batch(persona_ids, settings, yaml_config))
+
+    console.print(Panel(
+        f"Dashboard: http://localhost:{port}\n"
+        f"Batch auto-run: {'yes' if run_batch else 'no (view-only mode)'}",
+        title="Travliaq Dashboard",
+        border_style="cyan",
+    ))
+
+    uvicorn.run(app, host=host, port=port, log_level="warning")
+
+
 @cli.command("preview-prompt")
 @click.argument("persona_id")
 def preview_prompt(persona_id: str):
