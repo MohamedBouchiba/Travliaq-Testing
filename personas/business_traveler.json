@@ -79,6 +79,11 @@
       "phase": "completion",
       "goal": "Atteindre les résultats de recherche de vol",
       "success_indicator": "Résultats de vol affichés ou bouton de recherche visible"
+    },
+    {
+      "phase": "send_logs",
+      "goal": "Cliquer sur le lien 'Cliquez ici pour nous aider' en bas du chat, écrire un résumé dans la popup, puis envoyer",
+      "success_indicator": "La popup de feedback est soumise"
     }
   ],
 

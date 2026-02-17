@@ -79,6 +79,11 @@
       "phase": "completion",
       "goal": "Arriver au récapitulatif ou à la recherche de vol",
       "success_indicator": "Récapitulatif ou résultats de recherche"
+    },
+    {
+      "phase": "send_logs",
+      "goal": "Cliquer sur le lien 'Cliquez ici pour nous aider' en bas du chat, écrire un résumé dans la popup, puis envoyer",
+      "success_indicator": "La popup de feedback est soumise"
     }
   ],
 

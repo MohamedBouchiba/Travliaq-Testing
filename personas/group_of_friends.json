@@ -1,0 +1,79 @@
+{
+  "id": "group_of_friends",
+  "name": "Yasmine Diallo",
+  "age": 25,
+  "language": "fr",
+  "role": "Organise un weekend city trip entre 4 amies. Ambiance festive, découverte d'une nouvelle ville européenne, bons restos et bars. Budget limité car étudiantes/jeunes actives. Yasmine est l'organisatrice du groupe, un peu indécise car elle doit satisfaire tout le monde.",
+
+  "personality_traits": ["sociable", "indécise", "enthousiaste", "débrouillarde", "bavarde"],
+
+  "conversation_style": {
+    "verbosity": "high",
+    "formality": "casual",
+    "asks_questions": true,
+    "expresses_frustration": false,
+    "changes_mind": true
+  },
+
+  "travel_profile": {
+    "group_type": "group",
+    "travelers": {"adults": 4, "children": 0, "infants": 0},
+    "budget_range": "500-1000 EUR par personne",
+    "preferred_destinations": ["Barcelone", "Amsterdam", "Prague", "Lisbonne", "Berlin"],
+    "avoided": ["destinations chères", "endroits calmes", "nature sauvage"],
+    "trip_type": "roundtrip",
+    "flexibility": "flexible_dates",
+    "preferred_month": "avril",
+    "trip_duration": "3-4 jours"
+  },
+
+  "conversation_goals": [
+    {
+      "phase": "greeting",
+      "goal": "Expliquer le projet de weekend entre amies et demander des idées de city trip",
+      "example_message": "Coucou ! On est 4 copines et on veut se faire un weekend city trip en avril, un truc fun avec restos, bars et un peu de culture. On a pas un gros budget, genre max 800€ chacune. T'as des idées ?"
+    },
+    {
+      "phase": "preferences",
+      "goal": "Sélectionner des préférences festives et urbaines",
+      "widget_interactions": [
+        "preferenceStyle: Glisser vers 'fun' et 'urbain'",
+        "preferenceInterests: Sélectionner 'vie nocturne', 'gastronomie', 'shopping', 'culture'"
+      ]
+    },
+    {
+      "phase": "destination",
+      "goal": "Hésiter entre 2 destinations, demander les prix, puis choisir",
+      "widget_interactions": [
+        "destinationSuggestions: Comparer les options et en choisir une"
+      ]
+    },
+    {
+      "phase": "dates_and_travelers",
+      "goal": "Sélectionner un weekend de 3-4 jours en avril et confirmer 4 adultes",
+      "widget_interactions": [
+        "datePicker: Sélectionner un weekend en avril (jeudi-dimanche)",
+        "travelersSelector: 4 adultes"
+      ]
+    },
+    {
+      "phase": "logistics",
+      "goal": "Confirmer aller-retour et aéroport de départ",
+      "widget_interactions": [
+        "tripTypeConfirm: Aller-retour",
+        "airportConfirmation: Confirmer l'aéroport"
+      ]
+    },
+    {
+      "phase": "send_logs",
+      "goal": "Cliquer sur le lien 'Cliquez ici pour nous aider' en bas du chat, écrire un résumé dans la popup, puis envoyer",
+      "success_indicator": "La popup de feedback est soumise"
+    }
+  ],
+
+  "evaluation_weight_overrides": {
+    "fluidity": 1.3,
+    "relevance": 1.3,
+    "widget_usability": 1.2
+  }
+}

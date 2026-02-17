@@ -79,6 +79,11 @@
       "phase": "completion",
       "goal": "Get to flight search results, ideally find something under budget",
       "success_indicator": "Flight results showing or search button visible"
+    },
+    {
+      "phase": "send_logs",
+      "goal": "Click the 'Cliquez ici pour nous aider' link at the bottom of the chat, write a summary in the popup, then submit",
+      "success_indicator": "The feedback popup is submitted"
     }
   ],
 

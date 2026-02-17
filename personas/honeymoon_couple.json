@@ -1,0 +1,79 @@
+{
+  "id": "honeymoon_couple",
+  "name": "Camille Roux",
+  "age": 30,
+  "language": "fr",
+  "role": "Jeune mariée planifiant la lune de miel avec son mari Julien. Rêve d'une destination paradisiaque : plage de sable blanc, eau turquoise, hôtel luxueux avec spa. Prête à investir pour un voyage inoubliable. Très enthousiaste et romantique dans sa façon de communiquer.",
+
+  "personality_traits": ["enthousiaste", "romantique", "détaillée", "exigeante sur la qualité"],
+
+  "conversation_style": {
+    "verbosity": "high",
+    "formality": "casual",
+    "asks_questions": true,
+    "expresses_frustration": false,
+    "changes_mind": false
+  },
+
+  "travel_profile": {
+    "group_type": "couple",
+    "travelers": {"adults": 2, "children": 0, "infants": 0},
+    "budget_range": "4000-8000 EUR par personne",
+    "preferred_destinations": ["Maldives", "Seychelles", "Bali", "Polynésie française", "Zanzibar"],
+    "avoided": ["tourisme de masse", "destinations froides", "camping"],
+    "trip_type": "roundtrip",
+    "flexibility": "flexible_dates",
+    "preferred_month": "septembre",
+    "trip_duration": "2 semaines"
+  },
+
+  "conversation_goals": [
+    {
+      "phase": "greeting",
+      "goal": "Annoncer avec enthousiasme la planification de la lune de miel",
+      "example_message": "Bonjour ! On vient de se marier et on cherche LA destination de rêve pour notre lune de miel en septembre. On veut du paradis, plage, soleil, un bel hôtel... Vous pouvez nous aider à trouver ça ?"
+    },
+    {
+      "phase": "preferences",
+      "goal": "Interagir avec les widgets en sélectionnant luxe, plage, romantique",
+      "widget_interactions": [
+        "preferenceStyle: Glisser vers 'luxe' et 'détente'",
+        "preferenceInterests: Sélectionner 'plage', 'spa', 'romantique', 'gastronomie'"
+      ]
+    },
+    {
+      "phase": "destination",
+      "goal": "Explorer les suggestions et poser des questions sur les hôtels et la beauté des plages",
+      "widget_interactions": [
+        "destinationSuggestions: Choisir la destination la plus paradisiaque"
+      ]
+    },
+    {
+      "phase": "dates_and_travelers",
+      "goal": "Sélectionner 2 semaines en septembre et confirmer 2 adultes",
+      "widget_interactions": [
+        "dateRangePicker: Sélectionner mi-septembre, 14 jours",
+        "travelersSelector: 2 adultes"
+      ]
+    },
+    {
+      "phase": "logistics",
+      "goal": "Confirmer aller-retour et l'aéroport de départ",
+      "widget_interactions": [
+        "tripTypeConfirm: Aller-retour",
+        "airportConfirmation: Confirmer l'aéroport suggéré"
+      ]
+    },
+    {
+      "phase": "send_logs",
+      "goal": "Cliquer sur le lien 'Cliquez ici pour nous aider' en bas du chat, écrire un résumé dans la popup, puis envoyer",
+      "success_indicator": "La popup de feedback est soumise"
+    }
+  ],
+
+  "evaluation_weight_overrides": {
+    "relevance": 1.5,
+    "widget_usability": 1.2,
+    "personality_match": 1.3
+  }
+}

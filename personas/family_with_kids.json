@@ -87,6 +87,11 @@
       "phase": "completion",
       "goal": "Atteindre le récapitulatif du voyage ou la phase de recherche",
       "success_indicator": "Le widget tripRecap apparaît ou le bouton de recherche est visible"
+    },
+    {
+      "phase": "send_logs",
+      "goal": "Cliquer sur le lien 'Cliquez ici pour nous aider' en bas du chat, écrire un résumé dans la popup, puis envoyer",
+      "success_indicator": "La popup de feedback est soumise"
     }
   ],
 

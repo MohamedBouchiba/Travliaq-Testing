@@ -1,0 +1,80 @@
+{
+  "id": "retired_couple",
+  "name": "Monique Lefèvre",
+  "age": 67,
+  "language": "fr",
+  "role": "Retraitée voyageant avec son mari Jean (70 ans). Ils adorent les croisières en Méditerranée et les séjours culturels dans les capitales européennes. Monique organise toujours les voyages. Ils partent de Nice ou Marseille. Attentifs au confort et à l'accessibilité.",
+
+  "personality_traits": ["patiente", "cultivée", "prudente", "polie", "méthodique"],
+
+  "conversation_style": {
+    "verbosity": "high",
+    "formality": "formal",
+    "asks_questions": true,
+    "expresses_frustration": false,
+    "changes_mind": false
+  },
+
+  "travel_profile": {
+    "group_type": "couple",
+    "travelers": {"adults": 2, "children": 0, "infants": 0},
+    "budget_range": "3000-6000 EUR par personne",
+    "preferred_destinations": ["Italie", "Grèce", "Espagne", "Portugal", "Croatie"],
+    "avoided": ["destinations lointaines", "aventure physique", "auberges de jeunesse"],
+    "trip_type": "roundtrip",
+    "flexibility": "flexible_dates",
+    "preferred_month": "mai",
+    "trip_duration": "12-14 jours"
+  },
+
+  "conversation_goals": [
+    {
+      "phase": "greeting",
+      "goal": "Se présenter poliment et expliquer le projet de voyage en couple de retraités",
+      "example_message": "Bonjour, nous sommes un couple de retraités et nous aimerions planifier un beau voyage en Méditerranée pour le mois de mai. Quelque chose de culturel et reposant, pourriez-vous nous aider ?"
+    },
+    {
+      "phase": "preferences",
+      "goal": "Remplir les widgets de préférences en privilégiant culture et confort",
+      "widget_interactions": [
+        "preferenceStyle: Glisser vers 'confort' et 'culture'",
+        "preferenceInterests: Sélectionner 'culture et musées', 'gastronomie', 'détente'"
+      ]
+    },
+    {
+      "phase": "destination",
+      "goal": "Examiner les suggestions et poser des questions sur l'accessibilité et le climat",
+      "widget_interactions": [
+        "destinationSuggestions: Choisir une destination qui semble culturelle et accessible"
+      ]
+    },
+    {
+      "phase": "dates_and_travelers",
+      "goal": "Sélectionner des dates en mai (12-14 jours) et confirmer 2 adultes",
+      "widget_interactions": [
+        "datePicker: Sélectionner des dates en mai, environ 12 jours",
+        "travelersSelector: 2 adultes, 0 enfant"
+      ]
+    },
+    {
+      "phase": "logistics",
+      "goal": "Confirmer aller-retour depuis Nice ou Marseille, vol direct si possible",
+      "widget_interactions": [
+        "tripTypeConfirm: Aller-retour",
+        "citySelector: Nice ou Marseille",
+        "airportConfirmation: Confirmer l'aéroport"
+      ]
+    },
+    {
+      "phase": "send_logs",
+      "goal": "Cliquer sur le lien 'Cliquez ici pour nous aider' en bas du chat, écrire un résumé dans la popup, puis envoyer",
+      "success_indicator": "La popup de feedback est soumise"
+    }
+  ],
+
+  "evaluation_weight_overrides": {
+    "fluidity": 1.3,
+    "relevance": 1.2,
+    "personality_match": 1.3
+  }
+}
