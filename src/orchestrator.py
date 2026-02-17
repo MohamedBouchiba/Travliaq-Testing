@@ -19,6 +19,7 @@ from .agent_factory import create_agent
 from .config import Settings
 from .evaluator import evaluate_run
 from .events import DashboardEvent, EventType, get_event_bus
+from .loop_detector import LoopDetector
 from .models import RunStatus, TestRunResult
 from .persona_loader import PersonaDefinition, load_all_personas, load_persona
 from .report_writer import write_report
@@ -52,7 +53,7 @@ def _check_llm_health(settings: Settings) -> bool:
         },
     )
     client.chat.completions.create(
-        model=settings.openrouter_model,
+        model=settings.openrouter_eval_model,
         messages=[{"role": "user", "content": "ping"}],
         max_tokens=5,
     )
@@ -75,7 +76,7 @@ async def run_single_persona(
     logger.info(f"[{persona.id}] Group: {persona.travel_profile.group_type}")
     logger.info(f"[{persona.id}] Budget: {persona.travel_profile.budget_range}")
     logger.info(f"[{persona.id}] Phases planned: {[g.phase for g in persona.conversation_goals]}")
-    logger.info(f"[{persona.id}] LLM: {settings.openrouter_model}")
+    logger.info(f"[{persona.id}] LLM Agent: {settings.openrouter_model} | Eval: {settings.openrouter_eval_model}")
 
     result = TestRunResult(
         run_id=f"{persona.id}-{run_id}",
@@ -130,13 +131,65 @@ async def run_single_persona(
             ))
         logger.info(f"[{persona.id}]   Browser headless: {yaml_config.get('browser', {}).get('headless', False)}")
         logger.info(f"[{persona.id}]   Window: {yaml_config.get('browser', {}).get('window_width', 1440)}x{yaml_config.get('browser', {}).get('window_height', 900)}")
-        agent, browser = create_agent(persona, settings, yaml_config)
-        logger.info(f"[{persona.id}]   Agent created OK")
 
         max_steps = yaml_config.get("agent", {}).get("max_steps", 60)
         timeout = yaml_config.get("orchestration", {}).get(
             "timeout_per_persona_seconds", 600
         )
+
+        # Loop detector + step callback
+        loop_detector = LoopDetector()
+
+        async def _on_step(browser_state, agent_output, step_number):
+            """Step callback: emit AGENT_STEP + loop detection."""
+            action_names = []
+            if agent_output and hasattr(agent_output, "action") and agent_output.action:
+                for act in agent_output.action:
+                    try:
+                        act_dict = act.model_dump(exclude_unset=True)
+                        for key in act_dict:
+                            action_names.append(key)
+                    except Exception:
+                        action_names.append(str(type(act).__name__))
+
+            url = browser_state.url if browser_state and hasattr(browser_state, "url") else None
+            thinking = None
+            if agent_output and hasattr(agent_output, "thinking") and agent_output.thinking:
+                thinking = agent_output.thinking[:200]
+
+            if bus:
+                await bus.emit(DashboardEvent(
+                    type=EventType.AGENT_STEP, persona_id=persona.id,
+                    batch_id=batch_id, stage="2/5",
+                    data={
+                        "message": f"Step {step_number}/{max_steps}",
+                        "step_number": step_number,
+                        "max_steps": max_steps,
+                        "actions": action_names,
+                        "url": url,
+                        "thinking": thinking,
+                    },
+                ))
+
+            for action_name in action_names:
+                detection = loop_detector.push(action_name)
+                if detection.detected:
+                    logger.warning(f"[{persona.id}] LOOP DETECTED at step {step_number}: {detection.pattern}")
+                    if bus:
+                        await bus.emit(DashboardEvent(
+                            type=EventType.LOOP_DETECTED, persona_id=persona.id,
+                            batch_id=batch_id, stage="2/5",
+                            data={
+                                "message": f"Loop detected: {detection.pattern}",
+                                "pattern_type": detection.pattern_type,
+                                "pattern": detection.pattern,
+                                "step_number": step_number,
+                                "window": detection.window,
+                            },
+                        ))
+
+        agent, browser = create_agent(persona, settings, yaml_config, step_callback=_on_step)
+        logger.info(f"[{persona.id}]   Agent created OK")
 
         # --- Step 2: Run agent ---
         logger.info(f"[{persona.id}] [2/5] Running agent (max_steps={max_steps}, timeout={timeout}s)...")
@@ -288,8 +341,8 @@ async def run_single_persona(
     except Exception as e:
         logger.error(f"[{persona.id}]   Report write FAILED: {e}")
 
-    # Emit final persona result event
-    if bus and result.status == RunStatus.COMPLETED:
+    # Emit final persona result event (completed + timeout with partial data)
+    if bus and result.status in (RunStatus.COMPLETED, RunStatus.TIMEOUT):
         await bus.emit(DashboardEvent(
             type=EventType.PERSONA_COMPLETED, persona_id=persona.id,
             batch_id=batch_id, data=result.to_json_dict(),

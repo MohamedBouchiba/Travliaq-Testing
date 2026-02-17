@@ -82,30 +82,59 @@ async def _state_updater() -> None:
 
         elif etype == "persona_completed":
             if event.persona_id and event.persona_id in _batch_state["personas"]:
-                score = event.data.get("evaluation", {}).get("overall_score")
-                _batch_state["personas"][event.persona_id] = {
-                    "status": "completed",
+                d = event.data
+                score = d.get("evaluation", {}).get("overall_score")
+                status = d.get("status", "completed")
+                _batch_state["personas"][event.persona_id].update({
+                    "status": status,
                     "stage": "5/5",
                     "score": score,
-                    "phase_furthest": event.data.get("execution", {}).get("phase_furthest"),
-                    "duration": event.data.get("timing", {}).get("duration_seconds"),
-                }
+                    "phase_furthest": d.get("execution", {}).get("phase_furthest"),
+                    "duration": d.get("timing", {}).get("duration_seconds"),
+                    "result_data": d,  # Full result for late joiners
+                })
 
         elif etype == "persona_failed":
             if event.persona_id and event.persona_id in _batch_state["personas"]:
-                _batch_state["personas"][event.persona_id] = {
+                _batch_state["personas"][event.persona_id].update({
                     "status": "failed",
                     "stage": event.data.get("stage"),
                     "error": event.data.get("error"),
-                }
+                })
 
         elif etype == "persona_timeout":
             if event.persona_id and event.persona_id in _batch_state["personas"]:
-                _batch_state["personas"][event.persona_id] = {
+                _batch_state["personas"][event.persona_id].update({
                     "status": "timeout",
-                    "stage": _batch_state["personas"][event.persona_id].get("stage"),
                     "error": event.data.get("error"),
-                }
+                })
+
+        elif etype == "agent_step":
+            if event.persona_id and event.persona_id in _batch_state["personas"]:
+                p = _batch_state["personas"][event.persona_id]
+                p["current_step"] = event.data.get("step_number")
+                p["max_steps"] = event.data.get("max_steps")
+                p["current_url"] = event.data.get("url")
+                if "step_history" not in p:
+                    p["step_history"] = []
+                p["step_history"].append({
+                    "step": event.data.get("step_number"),
+                    "actions": event.data.get("actions"),
+                    "url": event.data.get("url"),
+                })
+                if len(p["step_history"]) > 20:
+                    p["step_history"] = p["step_history"][-20:]
+
+        elif etype == "loop_detected":
+            if event.persona_id and event.persona_id in _batch_state["personas"]:
+                p = _batch_state["personas"][event.persona_id]
+                if "loops" not in p:
+                    p["loops"] = []
+                p["loops"].append({
+                    "pattern_type": event.data.get("pattern_type"),
+                    "pattern": event.data.get("pattern"),
+                    "step_number": event.data.get("step_number"),
+                })
 
         elif etype == "batch_completed":
             _batch_state["status"] = "completed"

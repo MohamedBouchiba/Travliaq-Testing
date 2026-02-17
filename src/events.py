@@ -29,6 +29,10 @@ class EventType(str, Enum):
     PERSONA_FAILED = "persona_failed"
     PERSONA_TIMEOUT = "persona_timeout"
 
+    # Agent step-level
+    AGENT_STEP = "agent_step"
+    LOOP_DETECTED = "loop_detected"
+
     # Extra
     SCREENSHOT_SAVED = "screenshot_saved"
 

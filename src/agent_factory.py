@@ -68,6 +68,7 @@ def create_agent(
     persona: PersonaDefinition,
     settings: Settings,
     yaml_config: dict,
+    step_callback=None,
 ) -> tuple[Agent, Browser]:
     """Create a browser-use Agent configured for a persona.
 
@@ -95,6 +96,7 @@ def create_agent(
         use_vision=agent_cfg.get("use_vision", True),
         save_conversation_path=str(conv_dir),
         extend_system_message=extend_msg,
+        register_new_step_callback=step_callback,
     )
 
     return agent, browser

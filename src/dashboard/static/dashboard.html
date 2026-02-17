@@ -19,7 +19,7 @@
   .app { display: grid; grid-template-rows: 56px 1fr 48px; height: 100vh; }
   .header { background: var(--bg2); display: flex; align-items: center; padding: 0 20px; gap: 16px; border-bottom: 1px solid var(--bg3); }
   .header h1 { font-size: 16px; font-weight: 600; }
-  .main { display: grid; grid-template-columns: 260px 1fr; overflow: hidden; }
+  .main { display: grid; grid-template-columns: 280px 1fr; overflow: hidden; }
   .footer { background: var(--bg2); display: flex; align-items: center; padding: 0 20px; gap: 24px; font-size: 13px; color: var(--text2); border-top: 1px solid var(--bg3); }
 
   /* Header badges */
@@ -49,10 +49,12 @@
   .persona-info { flex: 1; min-width: 0; }
   .persona-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .persona-meta { font-size: 11px; color: var(--text3); }
+  .persona-detail { font-size: 10px; color: var(--text3); margin-top: 2px; }
   .persona-score { font-size: 14px; font-weight: 700; }
   .score-good { color: var(--green); }
   .score-mid { color: var(--yellow); }
   .score-bad { color: var(--red); }
+  .loop-indicator { font-size: 10px; color: var(--purple); margin-left: 4px; }
 
   /* Main panel */
   .panel { overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
@@ -67,14 +69,15 @@
   .run-header .lang { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: var(--bg3); color: var(--text2); }
 
   /* Stage progress bar */
-  .stages { display: flex; gap: 4px; margin-bottom: 16px; }
-  .stage { flex: 1; height: 32px; border-radius: 4px; background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text3); transition: all 0.3s; }
+  .stages { display: flex; gap: 4px; margin-bottom: 8px; }
+  .stage { flex: 1; border-radius: 4px; background: var(--bg3); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: var(--text3); transition: all 0.3s; padding: 6px 2px; }
   .stage.done { background: #14532d; color: var(--green); }
   .stage.active { background: #1e3a5f; color: var(--accent); animation: pulse 2s infinite; }
+  .stage.failed-stage { background: #450a0a; color: var(--red); }
+  .stage .stage-time { font-size: 8px; margin-top: 2px; opacity: 0.7; }
 
   /* Metadata grid */
   .meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
-  .meta-item { }
   .meta-label { font-size: 11px; color: var(--text3); text-transform: uppercase; }
   .meta-value { font-size: 14px; font-weight: 500; margin-top: 2px; }
 
@@ -89,7 +92,6 @@
   .overall-score .number { font-size: 48px; font-weight: 700; }
   .overall-score .label { font-size: 12px; color: var(--text3); }
   canvas#radar { display: block; margin: 0 auto; }
-  .scores-details { }
   .score-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
   .score-row .axis { font-size: 12px; color: var(--text2); width: 140px; text-align: right; }
   .score-bar-bg { flex: 1; height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
@@ -112,6 +114,21 @@
   .event-log .msg { color: var(--text2); }
   .event-log .msg.error { color: var(--red); }
   .event-log .msg.success { color: var(--green); }
+  .event-log .msg.loop { color: var(--purple); }
+
+  /* Collapsible sections */
+  .collapsible-header { cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+  .collapsible-header .arrow { font-size: 10px; transition: transform 0.2s; }
+  .collapsible-header .arrow.open { transform: rotate(90deg); }
+  .collapsible-body { display: none; max-height: 400px; overflow-y: auto; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 12px; line-height: 1.6; color: var(--text2); white-space: pre-wrap; margin-top: 8px; padding: 8px; background: var(--bg); border-radius: 4px; }
+  .collapsible-body.open { display: block; }
+
+  /* Screenshots */
+  .screenshots-gallery { display: flex; flex-wrap: wrap; gap: 8px; }
+  .screenshot-thumb { width: 120px; cursor: pointer; border-radius: 4px; overflow: hidden; border: 1px solid var(--bg3); transition: border-color 0.15s; }
+  .screenshot-thumb:hover { border-color: var(--accent); }
+  .screenshot-thumb img { width: 100%; height: 80px; object-fit: cover; display: block; }
+  .screenshot-label { font-size: 10px; color: var(--text3); text-align: center; padding: 2px; }
 
   /* Empty states */
   .empty { text-align: center; padding: 40px; color: var(--text3); }
@@ -130,7 +147,6 @@
 </head>
 <body>
 <div class="app">
-  <!-- Header -->
   <div class="header">
     <h1>Travliaq Testing Dashboard</h1>
     <span id="batchBadge" class="badge badge-idle">IDLE</span>
@@ -140,15 +156,12 @@
 
   <div class="reconnecting" id="reconnecting">Reconnecting to server...</div>
 
-  <!-- Main -->
   <div class="main">
-    <!-- Sidebar -->
     <div class="sidebar">
       <h2>Personas</h2>
       <div id="personaList"></div>
     </div>
 
-    <!-- Panel -->
     <div class="panel" id="panel">
       <div class="empty" id="emptyState">
         <div class="icon">&#128640;</div>
@@ -158,7 +171,6 @@
     </div>
   </div>
 
-  <!-- Footer -->
   <div class="footer">
     <span id="footerProgress">0/0 completed</span>
     <span id="footerAvg"></span>
@@ -174,7 +186,8 @@ let state = { batch_id: null, status: 'idle', personas: {}, current_persona: nul
 let selectedPersona = null;
 let startedAt = null;
 let elapsedTimer = null;
-let resultCache = {};  // filename -> full result data
+let resultCache = {};
+let personaMetadata = {};
 
 const STAGES = [
   { key: '0/5', label: 'Health' },
@@ -203,7 +216,6 @@ function connectSSE() {
       return;
     }
 
-    // Route events
     const t = data.type;
     if (t === 'batch_started') {
       state.batch_id = data.batch_id;
@@ -224,22 +236,39 @@ function connectSSE() {
     } else if (t === 'persona_completed') {
       const d = data.data || {};
       if (data.persona_id && state.personas[data.persona_id]) {
-        state.personas[data.persona_id] = {
-          status: 'completed', stage: '5/5',
+        const status = d.status || 'completed';
+        Object.assign(state.personas[data.persona_id], {
+          status: status, stage: '5/5',
           score: d.evaluation?.overall_score,
           phase_furthest: d.execution?.phase_furthest,
           duration: d.timing?.duration_seconds,
           result_data: d,
-        };
+        });
       }
     } else if (t === 'persona_failed') {
       if (data.persona_id && state.personas[data.persona_id]) {
-        state.personas[data.persona_id] = { status: 'failed', error: data.data?.error, stage: data.data?.stage };
+        Object.assign(state.personas[data.persona_id], { status: 'failed', error: data.data?.error, stage: data.data?.stage });
       }
     } else if (t === 'persona_timeout') {
       if (data.persona_id && state.personas[data.persona_id]) {
         state.personas[data.persona_id].status = 'timeout';
         state.personas[data.persona_id].error = data.data?.error;
+      }
+    } else if (t === 'agent_step') {
+      if (data.persona_id && state.personas[data.persona_id]) {
+        const p = state.personas[data.persona_id];
+        p.current_step = data.data?.step_number;
+        p.max_steps = data.data?.max_steps;
+        p.current_url = data.data?.url;
+        if (!p.step_history) p.step_history = [];
+        p.step_history.push({ step: data.data?.step_number, actions: data.data?.actions, url: data.data?.url });
+        if (p.step_history.length > 20) p.step_history = p.step_history.slice(-20);
+      }
+    } else if (t === 'loop_detected') {
+      if (data.persona_id && state.personas[data.persona_id]) {
+        const p = state.personas[data.persona_id];
+        if (!p.loops) p.loops = [];
+        p.loops.push(data.data);
       }
     } else if (t === 'batch_completed') {
       state.status = 'completed';
@@ -248,10 +277,8 @@ function connectSSE() {
       stopElapsedTimer();
     }
 
-    // Append to events log
     state.events_log.push(data);
     if (state.events_log.length > 200) state.events_log = state.events_log.slice(-200);
-
     renderAll();
   };
   evtSource.onerror = function() {
@@ -279,6 +306,18 @@ function formatDuration(s) {
 }
 
 // ---------------------------------------------------------------------------
+// Persona metadata fetch
+// ---------------------------------------------------------------------------
+async function fetchPersonaMetadata() {
+  try {
+    const res = await fetch('/api/personas');
+    const list = await res.json();
+    list.forEach(p => { personaMetadata[p.id] = p; });
+    renderSidebar();
+  } catch (e) { /* ignore */ }
+}
+
+// ---------------------------------------------------------------------------
 // Render
 // ---------------------------------------------------------------------------
 function renderAll() {
@@ -296,6 +335,12 @@ function renderHeader() {
   if (state.status === 'running' && startedAt && !elapsedTimer) startElapsedTimer();
 }
 
+function langFlag(lang) {
+  if (lang === 'fr') return '\uD83C\uDDEB\uD83C\uDDF7';
+  if (lang === 'en') return '\uD83C\uDDEC\uD83C\uDDE7';
+  return lang || '';
+}
+
 function renderSidebar() {
   const list = document.getElementById('personaList');
   const ids = Object.keys(state.personas);
@@ -303,20 +348,29 @@ function renderSidebar() {
 
   list.innerHTML = ids.map(id => {
     const p = state.personas[id];
+    const meta = personaMetadata[id];
     const isActive = id === selectedPersona;
     const scoreHtml = p.score != null ? `<span class="persona-score ${p.score >= 7 ? 'score-good' : p.score >= 5 ? 'score-mid' : 'score-bad'}">${p.score.toFixed(1)}</span>` : '';
     const stageText = p.stage || '';
+    const stepText = p.current_step != null ? ` (${p.current_step}/${p.max_steps || '?'})` : '';
+    const loopWarn = p.loops?.length ? `<span class="loop-indicator">\u26A0 ${p.loops.length} loop${p.loops.length > 1 ? 's' : ''}</span>` : '';
+    const metaLine = meta ? `<div class="persona-detail">${langFlag(meta.language)} ${meta.group_type || ''}${meta.budget ? ' | ' + meta.budget.split(' ')[0] : ''}</div>` : '';
+
     return `<div class="persona-card ${isActive ? 'active' : ''}" onclick="selectPersona('${id}')">
       <div class="persona-icon ${p.status}"></div>
       <div class="persona-info">
-        <div class="persona-name">${id.replace(/_/g, ' ')}</div>
-        <div class="persona-meta">${p.status}${stageText ? ' - ' + stageText : ''}</div>
+        <div class="persona-name">${id.replace(/_/g, ' ')}${loopWarn}</div>
+        <div class="persona-meta">${p.status}${stageText ? ' - ' + stageText : ''}${stepText}</div>
+        ${metaLine}
       </div>
       ${scoreHtml}
     </div>`;
   }).join('');
 }
 
+// ---------------------------------------------------------------------------
+// Panel — 10 sections
+// ---------------------------------------------------------------------------
 function renderPanel() {
   const panel = document.getElementById('panel');
   const empty = document.getElementById('emptyState');
@@ -332,57 +386,44 @@ function renderPanel() {
   const sel = selectedPersona;
   const p = sel ? state.personas[sel] : null;
 
+  if (!p) {
+    panel.innerHTML = '<div class="empty"><p>Select a persona from the sidebar</p></div>';
+    return;
+  }
+
+  const rd = p.result_data;
   let html = '';
 
-  // Active run monitor
-  if (p) {
-    html += `<div class="card">
-      <h3>Active Run</h3>
-      <div class="run-header">
-        <span class="name">${sel.replace(/_/g, ' ')}</span>
-        <span class="badge badge-${p.status}">${p.status}</span>
-      </div>
-      <div class="stages">${renderStages(p.stage, p.status)}</div>
-      <div class="meta-grid">
-        ${p.duration != null ? `<div class="meta-item"><div class="meta-label">Duration</div><div class="meta-value">${formatDuration(Math.floor(p.duration))}</div></div>` : ''}
-        ${p.phase_furthest ? `<div class="meta-item"><div class="meta-label">Furthest Phase</div><div class="meta-value">${p.phase_furthest}</div></div>` : ''}
-        ${p.error ? `<div class="meta-item"><div class="meta-label">Error</div><div class="meta-value" style="color:var(--red)">${truncate(p.error, 100)}</div></div>` : ''}
-      </div>
-    </div>`;
+  // 1. Persona Banner
+  html += renderBanner(sel, p);
+
+  // 2. Error/Blockage Panel
+  html += renderErrorPanel(p);
+
+  // 3. Loop Alert
+  html += renderLoopAlert(p);
+
+  // 4. Stage Timeline
+  html += renderStageTimeline(sel, p.stage, p.status);
+
+  // 5. Live Step Progress
+  html += renderStepProgress(p);
+
+  // 6. Execution Stats
+  html += renderExecutionStats(p);
+
+  // 7. Evaluation Card
+  if (rd?.evaluation?.overall_score != null) {
+    html += renderEvaluationCard(rd);
   }
 
-  // Scores (if persona has result data)
-  const rd = p?.result_data;
-  if (rd && rd.evaluation?.overall_score != null) {
-    const scores = rd.evaluation.scores || {};
-    html += `<div class="card">
-      <h3>Evaluation Scores</h3>
-      <div class="scores-layout">
-        <div>
-          <div class="overall-score">
-            <div class="number" style="color:${scoreColor(rd.evaluation.overall_score)}">${rd.evaluation.overall_score.toFixed(1)}</div>
-            <div class="label">Overall Score / 10</div>
-          </div>
-          <canvas id="radar" width="280" height="280"></canvas>
-        </div>
-        <div class="scores-details">
-          ${AXES.map(ax => {
-            const v = scores[ax] || 0;
-            return `<div class="score-row">
-              <span class="axis">${ax.replace(/_/g, ' ')}</span>
-              <div class="score-bar-bg"><div class="score-bar" style="width:${v*10}%;background:${scoreColor(v)}"></div></div>
-              <span class="val" style="color:${scoreColor(v)}">${v.toFixed(1)}</span>
-            </div>`;
-          }).join('')}
-          ${rd.evaluation.strengths?.length ? `<h4 style="margin-top:16px;font-size:12px;color:var(--green)">Strengths</h4><ul class="detail-list strengths">${rd.evaluation.strengths.map(s => `<li>${s}</li>`).join('')}</ul>` : ''}
-          ${rd.evaluation.frustration_points?.length ? `<h4 style="margin-top:12px;font-size:12px;color:var(--red)">Frustrations</h4><ul class="detail-list frustrations">${rd.evaluation.frustration_points.map(s => `<li>${s}</li>`).join('')}</ul>` : ''}
-          ${rd.evaluation.improvement_suggestions?.length ? `<h4 style="margin-top:12px;font-size:12px;color:var(--accent)">Suggestions</h4><ul class="detail-list suggestions">${rd.evaluation.improvement_suggestions.map(s => `<li>${s}</li>`).join('')}</ul>` : ''}
-        </div>
-      </div>
-    </div>`;
-  }
+  // 8. Conversation Log (collapsible)
+  html += renderConversationLog(rd);
 
-  // Event log
+  // 9. Agent Thoughts (collapsible)
+  html += renderAgentThoughts(rd);
+
+  // 10. Event Log
   html += `<div class="card">
     <h3>Event Log</h3>
     <div class="event-log" id="eventLog">${renderEventLog()}</div>
@@ -390,33 +431,250 @@ function renderPanel() {
 
   panel.innerHTML = html;
 
-  // Draw radar chart if canvas exists
+  // Draw radar chart
   const canvas = document.getElementById('radar');
-  if (canvas && rd?.evaluation?.scores) {
-    drawRadar(canvas, rd.evaluation.scores);
-  }
+  if (canvas && rd?.evaluation?.scores) drawRadar(canvas, rd.evaluation.scores);
 
   // Auto-scroll event log
   const logEl = document.getElementById('eventLog');
   if (logEl) logEl.scrollTop = logEl.scrollHeight;
 }
 
-function renderStages(currentStage, status) {
-  const currentIdx = STAGES.findIndex(s => s.key === currentStage);
-  return STAGES.map((s, i) => {
-    let cls = 'stage';
-    if (status === 'completed' || status === 'failed' || status === 'timeout') {
-      cls += i <= currentIdx || status === 'completed' ? ' done' : '';
-    } else if (i < currentIdx) { cls += ' done'; }
-    else if (i === currentIdx) { cls += ' active'; }
-    return `<div class="${cls}">${s.label}</div>`;
-  }).join('');
+// --- Section 1: Persona Banner ---
+function renderBanner(id, p) {
+  const rd = p.result_data;
+  const meta = personaMetadata[id];
+  const runId = rd?.run_id || '';
+  const model = rd?.meta?.llm_model_used || '';
+
+  return `<div class="card">
+    <div class="run-header">
+      <span class="name">${id.replace(/_/g, ' ')}</span>
+      <span class="badge badge-${p.status}">${p.status.toUpperCase()}</span>
+      ${meta?.language ? `<span class="lang">${langFlag(meta.language)} ${meta.language.toUpperCase()}</span>` : ''}
+    </div>
+    <div class="meta-grid">
+      ${runId ? `<div class="meta-item"><div class="meta-label">Run ID</div><div class="meta-value">${esc(runId)}</div></div>` : ''}
+      ${model ? `<div class="meta-item"><div class="meta-label">LLM Model</div><div class="meta-value">${esc(model)}</div></div>` : ''}
+      ${p.duration != null ? `<div class="meta-item"><div class="meta-label">Duration</div><div class="meta-value">${formatDuration(Math.floor(p.duration))}</div></div>` : ''}
+      ${meta?.group_type ? `<div class="meta-item"><div class="meta-label">Group</div><div class="meta-value">${esc(meta.group_type)}</div></div>` : ''}
+      ${meta?.budget ? `<div class="meta-item"><div class="meta-label">Budget</div><div class="meta-value">${esc(meta.budget)}</div></div>` : ''}
+      ${meta?.phases ? `<div class="meta-item"><div class="meta-label">Phases</div><div class="meta-value">${meta.phases}</div></div>` : ''}
+    </div>
+  </div>`;
 }
 
+// --- Section 2: Error/Blockage Panel ---
+function renderErrorPanel(p) {
+  if (p.status !== 'failed' && p.status !== 'timeout') return '';
+
+  const isTimeout = p.status === 'timeout';
+  const color = isTimeout ? 'var(--yellow)' : 'var(--red)';
+  const icon = isTimeout ? '\u23F1' : '\u26A0';
+  const title = isTimeout ? 'TIMEOUT' : 'FAILED';
+
+  const error = p.error || '';
+  let errorType = 'Unknown Error';
+  let suggestion = '';
+
+  if (p.stage === '0/5' || error.toLowerCase().includes('health check')) {
+    errorType = 'LLM Health Check Failure';
+    suggestion = 'OpenRouter API may be down or rate-limited. Check API key and model availability.';
+  } else if (isTimeout) {
+    errorType = 'Agent Timeout';
+    suggestion = 'Agent exceeded time limit. Consider increasing timeout_per_persona_seconds or reducing max_steps.';
+  } else if (error.toLowerCase().includes('browser') || error.toLowerCase().includes('playwright')) {
+    errorType = 'Browser Error';
+    suggestion = 'Browser crashed or page failed to load. Check target URL accessibility.';
+  } else if (error.includes('404') || error.toLowerCase().includes('openrouter') || error.toLowerCase().includes('no endpoints')) {
+    errorType = 'LLM API Error (Model Capability)';
+    suggestion = 'The model may not support vision/images. Try a vision-capable model or set use_vision: false.';
+  } else if (error.toLowerCase().includes('json') || error.toLowerCase().includes('agentoutput')) {
+    errorType = 'LLM Output Parsing Error';
+    suggestion = 'The model returned invalid JSON. Try a different model with better structured output support.';
+  }
+
+  return `<div class="card" style="border-color:${color}">
+    <h3 style="color:${color}">${icon} ${title}</h3>
+    <div class="meta-grid">
+      <div class="meta-item"><div class="meta-label">Error Type</div><div class="meta-value" style="color:${color}">${errorType}</div></div>
+      <div class="meta-item"><div class="meta-label">Failed At Stage</div><div class="meta-value">${p.stage || 'unknown'}</div></div>
+    </div>
+    <div style="margin-top:12px">
+      <div class="meta-label">Error Message</div>
+      <div class="meta-value" style="color:${color};font-family:monospace;font-size:12px;word-break:break-all;margin-top:4px">${esc(error)}</div>
+    </div>
+    ${suggestion ? `<div style="margin-top:12px"><div class="meta-label">Suggestion</div><div class="meta-value" style="color:var(--text2);font-size:13px;margin-top:4px">${suggestion}</div></div>` : ''}
+  </div>`;
+}
+
+// --- Section 3: Loop Alert ---
+function renderLoopAlert(p) {
+  if (!p.loops || p.loops.length === 0) return '';
+  const latest = p.loops[p.loops.length - 1];
+  return `<div class="card" style="border-color:var(--purple)">
+    <h3 style="color:var(--purple)">\u26A0 Loop Detected (${p.loops.length} total)</h3>
+    <div class="meta-grid">
+      <div class="meta-item"><div class="meta-label">Latest Pattern</div><div class="meta-value">${esc(latest.pattern || '')}</div></div>
+      <div class="meta-item"><div class="meta-label">Type</div><div class="meta-value">${esc(latest.pattern_type || '')}</div></div>
+      <div class="meta-item"><div class="meta-label">At Step</div><div class="meta-value">${latest.step_number || '?'}</div></div>
+    </div>
+    ${p.loops.length > 1 ? `<div style="margin-top:8px;font-size:12px;color:var(--text3)">Previous: ${p.loops.slice(0, -1).map(l => esc(l.pattern || '')).join(', ')}</div>` : ''}
+  </div>`;
+}
+
+// --- Section 4: Stage Timeline ---
+function renderStageTimeline(personaId, currentStage, status) {
+  const stageTimestamps = {};
+  state.events_log.forEach(e => {
+    if (e.persona_id === personaId && e.type?.startsWith('stage_') && e.stage) {
+      stageTimestamps[e.stage] = e.timestamp;
+    }
+  });
+
+  const currentIdx = STAGES.findIndex(s => s.key === currentStage);
+
+  const stagesHtml = STAGES.map((s, i) => {
+    let cls = 'stage';
+    if (status === 'completed') {
+      cls += ' done';
+    } else if (status === 'failed' || status === 'timeout') {
+      if (i < currentIdx) cls += ' done';
+      else if (i === currentIdx) cls += status === 'failed' ? ' failed-stage' : ' done';
+    } else {
+      if (i < currentIdx) cls += ' done';
+      else if (i === currentIdx) cls += ' active';
+    }
+
+    const ts = stageTimestamps[s.key];
+    const timeStr = ts ? new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+
+    return `<div class="${cls}" title="${s.label}${timeStr ? ' at ' + timeStr : ''}">
+      <div>${s.label}</div>
+      ${timeStr ? `<div class="stage-time">${timeStr}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  return `<div class="card"><h3>Pipeline Progress</h3><div class="stages">${stagesHtml}</div></div>`;
+}
+
+// --- Section 5: Live Step Progress ---
+function renderStepProgress(p) {
+  if (p.status !== 'running' || !p.current_step) return '';
+
+  const pct = p.max_steps ? Math.round((p.current_step / p.max_steps) * 100) : 0;
+  const recentSteps = (p.step_history || []).slice(-5);
+
+  return `<div class="card">
+    <h3>Agent Progress</h3>
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
+      <div style="font-size:32px;font-weight:700;color:var(--accent)">${p.current_step}</div>
+      <div>
+        <div style="font-size:12px;color:var(--text3)">of ${p.max_steps || '?'} steps</div>
+        <div class="score-bar-bg" style="width:200px;margin-top:4px">
+          <div class="score-bar" style="width:${pct}%;background:var(--accent)"></div>
+        </div>
+      </div>
+      ${p.current_url ? `<div style="margin-left:auto;font-size:11px;color:var(--text3);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.current_url)}">${esc(p.current_url)}</div>` : ''}
+    </div>
+    ${recentSteps.length ? `<div style="font-size:11px;color:var(--text3)">Recent: ${recentSteps.map(s => (s.actions || []).join(', ')).filter(Boolean).join(' \u2192 ')}</div>` : ''}
+  </div>`;
+}
+
+// --- Section 6: Execution Stats ---
+function renderExecutionStats(p) {
+  const rd = p.result_data;
+  if (!rd?.execution) return '';
+
+  const ex = rd.execution;
+  return `<div class="card">
+    <h3>Execution Details</h3>
+    <div class="meta-grid">
+      <div class="meta-item"><div class="meta-label">Total Steps</div><div class="meta-value">${ex.total_steps ?? '-'}</div></div>
+      <div class="meta-item"><div class="meta-label">Messages</div><div class="meta-value">${ex.total_messages ?? '-'}</div></div>
+      <div class="meta-item"><div class="meta-label">Furthest Phase</div><div class="meta-value">${ex.phase_furthest || '-'}</div></div>
+    </div>
+    ${ex.phases_reached?.length ? `<div style="margin-top:12px"><div class="meta-label">Phases Reached</div><div class="pills">${ex.phases_reached.map(ph => `<span class="pill">${esc(ph)}</span>`).join('')}</div></div>` : ''}
+    ${ex.widgets_interacted?.length ? `<div style="margin-top:8px"><div class="meta-label">Widgets Interacted</div><div class="pills">${ex.widgets_interacted.map(w => `<span class="pill">${esc(w)}</span>`).join('')}</div></div>` : ''}
+  </div>`;
+}
+
+// --- Section 7: Evaluation Card ---
+function renderEvaluationCard(rd) {
+  const scores = rd.evaluation.scores || {};
+  return `<div class="card">
+    <h3>Evaluation Scores</h3>
+    <div class="scores-layout">
+      <div>
+        <div class="overall-score">
+          <div class="number" style="color:${scoreColor(rd.evaluation.overall_score)}">${rd.evaluation.overall_score.toFixed(1)}</div>
+          <div class="label">Overall Score / 10</div>
+        </div>
+        <canvas id="radar" width="280" height="280"></canvas>
+      </div>
+      <div>
+        ${AXES.map(ax => {
+          const v = scores[ax] || 0;
+          return `<div class="score-row">
+            <span class="axis">${ax.replace(/_/g, ' ')}</span>
+            <div class="score-bar-bg"><div class="score-bar" style="width:${v*10}%;background:${scoreColor(v)}"></div></div>
+            <span class="val" style="color:${scoreColor(v)}">${v.toFixed(1)}</span>
+          </div>`;
+        }).join('')}
+        ${rd.evaluation.strengths?.length ? `<h4 style="margin-top:16px;font-size:12px;color:var(--green)">Strengths</h4><ul class="detail-list strengths">${rd.evaluation.strengths.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
+        ${rd.evaluation.frustration_points?.length ? `<h4 style="margin-top:12px;font-size:12px;color:var(--red)">Frustrations</h4><ul class="detail-list frustrations">${rd.evaluation.frustration_points.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
+        ${rd.evaluation.improvement_suggestions?.length ? `<h4 style="margin-top:12px;font-size:12px;color:var(--accent)">Suggestions</h4><ul class="detail-list suggestions">${rd.evaluation.improvement_suggestions.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
+        ${rd.evaluation.summary ? `<h4 style="margin-top:16px;font-size:12px;color:var(--purple)">Ressenti Humain</h4><div style="margin-top:4px;font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap">${esc(rd.evaluation.summary)}</div>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+// --- Section 8: Conversation Log ---
+function renderConversationLog(rd) {
+  if (!rd?.logs?.conversation) return '';
+  const conv = rd.logs.conversation;
+  let text = '';
+  if (Array.isArray(conv)) {
+    text = conv.map((c, i) => `[${i + 1}] ${typeof c === 'string' ? c : JSON.stringify(c)}`).join('\n\n');
+  } else {
+    text = String(conv);
+  }
+  return renderCollapsible('Conversation Log', esc(text), 'convLog');
+}
+
+// --- Section 9: Agent Thoughts ---
+function renderAgentThoughts(rd) {
+  if (!rd?.logs?.agent_thoughts?.length) return '';
+  const text = rd.logs.agent_thoughts.map((t, i) => `[Thought ${i + 1}] ${t}`).join('\n\n');
+  return renderCollapsible('Agent Thoughts', esc(text), 'agentThoughts');
+}
+
+function renderCollapsible(title, content, id) {
+  if (!content) return '';
+  return `<div class="card">
+    <div class="collapsible-header" onclick="toggleCollapse('${id}')">
+      <h3 style="margin-bottom:0">${title}</h3>
+      <span class="arrow" id="${id}-arrow">\u25B6</span>
+    </div>
+    <div class="collapsible-body" id="${id}">${content}</div>
+  </div>`;
+}
+
+function toggleCollapse(id) {
+  const el = document.getElementById(id);
+  const arrow = document.getElementById(id + '-arrow');
+  if (!el) return;
+  const isOpen = el.classList.contains('open');
+  el.classList.toggle('open');
+  if (arrow) arrow.classList.toggle('open');
+}
+
+// --- Event Log ---
 function renderEventLog() {
   const events = (selectedPersona
-    ? state.events_log.filter(e => !e.persona_id || e.persona_id === selectedPersona)
-    : state.events_log
+    ? state.events_log.filter(e => (!e.persona_id || e.persona_id === selectedPersona) && e.type !== 'agent_step')
+    : state.events_log.filter(e => e.type !== 'agent_step')
   ).slice(-50);
 
   return events.map(e => {
@@ -425,8 +683,9 @@ function renderEventLog() {
     const msg = e.data?.message || e.type?.replace(/_/g, ' ') || '';
     const stage = e.stage ? `[${e.stage}] ` : '';
     const cls = e.type?.includes('failed') || e.type?.includes('timeout') ? 'error' :
-                e.type?.includes('completed') ? 'success' : '';
-    return `<div class="entry"><span class="time">${time}</span><span class="persona">${pid}</span><span class="msg ${cls}">${stage}${msg}</span></div>`;
+                e.type?.includes('completed') ? 'success' :
+                e.type?.includes('loop_detected') ? 'loop' : '';
+    return `<div class="entry"><span class="time">${time}</span><span class="persona">${pid}</span><span class="msg ${cls}">${stage}${esc(msg)}</span></div>`;
   }).join('');
 }
 
@@ -461,7 +720,6 @@ function drawRadar(canvas, scores) {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Grid rings
   for (let ring = 2; ring <= 10; ring += 2) {
     ctx.beginPath();
     for (let i = 0; i <= n; i++) {
@@ -474,7 +732,6 @@ function drawRadar(canvas, scores) {
     ctx.stroke();
   }
 
-  // Axis lines + labels
   AXES.forEach((axis, i) => {
     const angle = i * angleStep - Math.PI / 2;
     ctx.beginPath();
@@ -482,7 +739,6 @@ function drawRadar(canvas, scores) {
     ctx.lineTo(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
     ctx.strokeStyle = 'rgba(255,255,255,0.1)';
     ctx.stroke();
-    // Label
     const lx = cx + (radius + 22) * Math.cos(angle);
     const ly = cy + (radius + 22) * Math.sin(angle);
     ctx.fillStyle = '#64748b';
@@ -495,7 +751,6 @@ function drawRadar(canvas, scores) {
     });
   });
 
-  // Data polygon
   ctx.beginPath();
   AXES.forEach((axis, i) => {
     const angle = i * angleStep - Math.PI / 2;
@@ -511,7 +766,6 @@ function drawRadar(canvas, scores) {
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  // Data points
   AXES.forEach((axis, i) => {
     const angle = i * angleStep - Math.PI / 2;
     const val = scores[axis] || 0;
@@ -538,7 +792,7 @@ async function loadResultsBrowser(panel) {
       const sc = r.score != null ? r.score.toFixed(1) : '-';
       const dur = r.duration != null ? formatDuration(Math.floor(r.duration)) : '-';
       const date = r.started_at ? new Date(r.started_at).toLocaleDateString('fr-FR') : '-';
-      html += `<tr onclick="loadResult('${r.filename}')"><td>${r.persona_id || r.filename}</td><td><span class="badge badge-${r.status}">${r.status}</span></td><td>${sc}</td><td>${r.phase_furthest || '-'}</td><td>${dur}</td><td>${date}</td></tr>`;
+      html += `<tr onclick="loadResult('${r.filename}')"><td>${r.persona_name || r.persona_id || r.filename}</td><td><span class="badge badge-${r.status}">${r.status}</span></td><td>${sc}</td><td>${r.phase_furthest || '-'}</td><td>${dur}</td><td>${date}</td></tr>`;
     });
     html += '</tbody></table></div>';
     panel.innerHTML += html;
@@ -546,10 +800,7 @@ async function loadResultsBrowser(panel) {
 }
 
 async function loadResult(filename) {
-  if (resultCache[filename]) {
-    showResultDetail(resultCache[filename]);
-    return;
-  }
+  if (resultCache[filename]) { showResultDetail(resultCache[filename]); return; }
   try {
     const res = await fetch(`/api/results/${filename}`);
     const data = await res.json();
@@ -559,7 +810,6 @@ async function loadResult(filename) {
 }
 
 function showResultDetail(data) {
-  // Inject as a "virtual" persona so the panel renderer can show it
   const pid = data.persona?.id || 'unknown';
   selectedPersona = pid;
   state.personas[pid] = {
@@ -578,13 +828,15 @@ function showResultDetail(data) {
 // ---------------------------------------------------------------------------
 function selectPersona(id) { selectedPersona = id; renderAll(); }
 function scoreColor(v) { return v >= 7 ? 'var(--green)' : v >= 5 ? 'var(--yellow)' : 'var(--red)'; }
-function truncate(s, n) { return s && s.length > n ? s.slice(0, n) + '...' : s || ''; }
+
+const _escEl = document.createElement('span');
+function esc(s) { _escEl.textContent = s || ''; return _escEl.innerHTML; }
 
 // ---------------------------------------------------------------------------
 // Init
 // ---------------------------------------------------------------------------
 connectSSE();
-// Also fetch initial batch status as fallback
+fetchPersonaMetadata();
 fetch('/api/batch/status').then(r => r.json()).then(d => {
   if (d.batch_id || Object.keys(d.personas || {}).length) {
     state = d;

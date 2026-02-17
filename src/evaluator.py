@@ -181,7 +181,7 @@ async def evaluate_run(
     def _call_eval_llm():
         try:
             return client.chat.completions.create(
-                model=settings.openrouter_model,
+                model=settings.openrouter_eval_model,
                 messages=messages,
                 temperature=temperature,
                 response_format={"type": "json_object"},
@@ -190,7 +190,7 @@ async def evaluate_run(
             if "response_format" in str(e).lower() or "json" in str(e).lower():
                 logger.warning(f"[eval] json_object mode not supported, retrying without response_format: {e}")
                 return client.chat.completions.create(
-                    model=settings.openrouter_model,
+                    model=settings.openrouter_eval_model,
                     messages=messages,
                     temperature=temperature,
                 )
