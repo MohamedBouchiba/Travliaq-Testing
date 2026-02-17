@@ -12,6 +12,15 @@ from .task_prompt_builder import build_task_prompt
 
 logger = logging.getLogger(__name__)
 
+
+def _get_provider(model_id: str) -> str:
+    """Identify LLM provider from model ID prefix."""
+    if model_id.startswith("gemini"):
+        return "google"
+    if model_id.startswith(("meta-llama/", "openai/gpt-oss")):
+        return "groq"
+    return "openrouter"
+
 EXTEND_SYSTEM_MSG_FR = (
     "CRITIQUE: Ceci est un site français de planification de voyage. "
     "Le champ de texte du chat a l'aria-label 'Envoyer un message...' (FR). "
@@ -41,6 +50,9 @@ def create_llm_for_model(model_id: str, settings: Settings):
         return ChatGoogle(
             model=model_id,
             api_key=settings.google_api_key,
+            retry_base_delay=10.0,  # 10s base (default 1.0) — respect Google rate limits
+            retry_max_delay=60.0,
+            max_retries=3,  # fail faster, let cross-provider fallback handle it
         )
 
     if settings.groq_api_key and model_id.startswith(("meta-llama/", "openai/gpt-oss")):
@@ -94,10 +106,11 @@ def create_agent(
     yaml_config: dict,
     step_callback=None,
     model_override: str | None = None,
-) -> tuple[Agent, Browser]:
+) -> tuple[Agent, Browser, str | None]:
     """Create a browser-use Agent configured for a persona.
 
-    Returns (agent, browser) so the caller can close the browser when done.
+    Returns (agent, browser, fallback_model_id) so the caller can close the
+    browser when done and knows which model was used as fallback.
     """
     chain = settings.build_model_chain()
     if not chain:
@@ -107,11 +120,15 @@ def create_agent(
     primary_model = model_override or chain[0]
     llm = create_llm_for_model(primary_model, settings)
 
-    # Agent-level fallback: browser-use switches on first 429/5xx mid-run
+    # Agent-level fallback: pick first model from a DIFFERENT provider
+    # so that a provider-wide rate limit doesn't cascade to fallback
+    primary_provider = _get_provider(primary_model)
     fallback_llm = None
+    fallback_model_id = None
     for candidate in chain:
-        if candidate != primary_model:
+        if _get_provider(candidate) != primary_provider:
             fallback_llm = create_llm_for_model(candidate, settings)
+            fallback_model_id = candidate
             break
 
     task = build_task_prompt(persona, yaml_config)
@@ -139,4 +156,4 @@ def create_agent(
         register_new_step_callback=step_callback,
     )
 
-    return agent, browser
+    return agent, browser, fallback_model_id

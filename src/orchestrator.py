@@ -217,8 +217,8 @@ async def run_single_persona(
                             },
                         ))
 
-        agent, browser = create_agent(persona, settings, yaml_config, step_callback=_on_step)
-        logger.info(f"[{persona.id}]   Agent created OK (primary: {primary_model})")
+        agent, browser, fallback_used = create_agent(persona, settings, yaml_config, step_callback=_on_step)
+        logger.info(f"[{persona.id}]   Agent created OK (primary: {primary_model}, fallback: {fallback_used or 'none'})")
 
         # --- Step 2: Run agent ---
         logger.info(f"[{persona.id}] [2/5] Running agent (max_steps={max_steps}, timeout={timeout}s)...")
@@ -243,8 +243,9 @@ async def run_single_persona(
             model_kw = ["404", "model", "endpoint", "vision", "image input", "rate limit", "modelprovider", "json_invalid"]
             is_model_failure = any(kw in first_error.lower() for kw in model_kw)
 
-            # Skip the first 2 models in chain (primary + fallback_llm already tried by browser-use)
-            remaining_models = model_chain[2:]
+            # Skip models already tried by browser-use (primary + cross-provider fallback)
+            tried = {primary_model, fallback_used} - {None}
+            remaining_models = [m for m in model_chain if m not in tried]
             if is_model_failure and remaining_models:
                 logger.warning(f"[{persona.id}]   Primary + fallback returned 0 actions ({len(all_errors)} errors)")
                 logger.warning(f"[{persona.id}]   First error: {first_error[:200]}")
@@ -278,7 +279,7 @@ async def run_single_persona(
                             },
                         ))
 
-                    agent, browser = create_agent(
+                    agent, browser, _ = create_agent(
                         persona, settings, yaml_config,
                         step_callback=_on_step,
                         model_override=backup_model,

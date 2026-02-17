@@ -26,8 +26,9 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     groq_model: str = "meta-llama/llama-4-scout-17b-16e-instruct"
 
-    # OpenRouter (LAST RESORT — 50 RPD free limit)
+    # OpenRouter
     openrouter_api_key: str = ""
+    openrouter_model: str = "google/gemma-3-12b-it"
     openrouter_backup_models: str = (
         "google/gemma-3-27b-it:free,"
         "nvidia/nemotron-nano-12b-v2-vl:free,"
@@ -51,14 +52,16 @@ class Settings(BaseSettings):
     def build_model_chain(self) -> list[str]:
         """Build ordered list of model IDs based on available API keys.
 
-        Priority: Google Gemini > Groq > OpenRouter free models.
+        Priority: OpenRouter primary > Groq > Google Gemini > OpenRouter backups.
         """
         chain: list[str] = []
+        if self.openrouter_api_key and self.openrouter_model:
+            chain.append(self.openrouter_model)
+        if self.groq_api_key:
+            chain.append(self.groq_model)
         if self.google_api_key:
             chain.append(self.google_model)
             chain.append(self.google_fallback_model)
-        if self.groq_api_key:
-            chain.append(self.groq_model)
         if self.openrouter_api_key:
             chain.extend(self.openrouter_backup_models_list)
         return chain
