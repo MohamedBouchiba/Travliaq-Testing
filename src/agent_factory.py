@@ -81,6 +81,14 @@ def create_agent(
 
     agent_cfg = yaml_config.get("agent", {})
 
+    # Agent-level fallback: browser-use switches on first 429/5xx mid-run
+    fallback_llm = None
+    primary = model_override or settings.openrouter_model
+    for bm in settings.backup_models_list:
+        if bm != primary:
+            fallback_llm = create_llm(settings, model_override=bm)
+            break
+
     # Conversation log path
     conv_dir = Path("output/conversations") / persona.id
     conv_dir.mkdir(parents=True, exist_ok=True)
@@ -90,6 +98,7 @@ def create_agent(
     agent = Agent(
         task=task,
         llm=llm,
+        fallback_llm=fallback_llm,
         browser=browser,
         max_actions_per_step=agent_cfg.get("max_actions_per_step", 3),
         max_failures=agent_cfg.get("max_failures", 5),

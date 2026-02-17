@@ -76,7 +76,8 @@ async def run_single_persona(
     logger.info(f"[{persona.id}] Group: {persona.travel_profile.group_type}")
     logger.info(f"[{persona.id}] Budget: {persona.travel_profile.budget_range}")
     logger.info(f"[{persona.id}] Phases planned: {[g.phase for g in persona.conversation_goals]}")
-    logger.info(f"[{persona.id}] LLM Agent: {settings.openrouter_model} | Backup: {settings.openrouter_backup_model} | Eval: {settings.openrouter_eval_model}")
+    backup_count = len(settings.backup_models_list)
+    logger.info(f"[{persona.id}] LLM Agent: {settings.openrouter_model} | Backups: {backup_count} models | Eval: {settings.openrouter_eval_model}")
 
     result = TestRunResult(
         run_id=f"{persona.id}-{run_id}",
@@ -214,47 +215,75 @@ async def run_single_persona(
             model_kw = ["404", "model", "endpoint", "vision", "image input", "rate limit", "modelprovider"]
             is_model_failure = any(kw in first_error.lower() for kw in model_kw)
 
-            if is_model_failure and settings.openrouter_backup_model:
+            backup_models = settings.backup_models_list
+            if is_model_failure and backup_models:
                 logger.warning(f"[{persona.id}]   Primary model returned 0 actions ({len(all_errors)} errors)")
                 logger.warning(f"[{persona.id}]   First error: {first_error[:200]}")
-                logger.info(f"[{persona.id}]   Retrying with backup model: {settings.openrouter_backup_model}")
+                logger.info(f"[{persona.id}]   {len(backup_models)} backup model(s) available — starting fallback chain")
 
-                # Close failed agent/browser
-                try:
-                    await agent.close()
-                except Exception:
-                    pass
-                agent = None
-                browser = None
+                fallback_succeeded = False
+                for i, backup_model in enumerate(backup_models, 1):
+                    logger.info(f"[{persona.id}]   Trying backup model {i}/{len(backup_models)}: {backup_model}")
 
-                # Reset loop detector for clean retry
-                loop_detector = LoopDetector()
-                result.llm_model_used = settings.openrouter_backup_model
+                    # Close previous agent/browser
+                    if agent:
+                        try:
+                            await agent.close()
+                        except Exception:
+                            pass
+                        agent = None
+                        browser = None
 
-                if bus:
-                    await bus.emit(DashboardEvent(
-                        type=EventType.STAGE_RUN_AGENT, persona_id=persona.id,
-                        batch_id=batch_id, stage="2/5",
-                        data={
-                            "max_steps": max_steps, "timeout": timeout,
-                            "message": f"Retrying with backup model: {settings.openrouter_backup_model}",
-                            "fallback": True,
-                        },
-                    ))
+                    # Reset loop detector for clean retry
+                    loop_detector = LoopDetector()
+                    result.llm_model_used = backup_model
 
-                agent, browser = create_agent(
-                    persona, settings, yaml_config,
-                    step_callback=_on_step,
-                    model_override=settings.openrouter_backup_model,
-                )
-                logger.info(f"[{persona.id}]   Backup agent created OK")
+                    if bus:
+                        await bus.emit(DashboardEvent(
+                            type=EventType.STAGE_RUN_AGENT, persona_id=persona.id,
+                            batch_id=batch_id, stage="2/5",
+                            data={
+                                "max_steps": max_steps, "timeout": timeout,
+                                "message": f"Fallback {i}/{len(backup_models)}: {backup_model}",
+                                "fallback": True, "fallback_index": i,
+                            },
+                        ))
 
-                history = await asyncio.wait_for(
-                    agent.run(max_steps=max_steps),
-                    timeout=timeout,
-                )
+                    agent, browser = create_agent(
+                        persona, settings, yaml_config,
+                        step_callback=_on_step,
+                        model_override=backup_model,
+                    )
+                    logger.info(f"[{persona.id}]   Backup agent created OK ({backup_model})")
+
+                    history = await asyncio.wait_for(
+                        agent.run(max_steps=max_steps),
+                        timeout=timeout,
+                    )
+
+                    # Check if this backup also failed completely
+                    if len(history.model_actions()) == 0 and history.has_errors():
+                        backup_errors = [str(e) for e in history.errors() if e]
+                        logger.warning(f"[{persona.id}]   Backup {i}/{len(backup_models)} also failed: {backup_errors[0][:150] if backup_errors else 'unknown'}")
+                        continue  # try next backup
+
+                    # This backup worked
+                    fallback_succeeded = True
+                    logger.info(f"[{persona.id}]   Backup model {backup_model} succeeded")
+                    break
+
+                if not fallback_succeeded:
+                    result.status = RunStatus.FAILED
+                    result.error_message = f"All {len(backup_models) + 1} models failed (primary + {len(backup_models)} backups): {first_error[:200]}"
+                    logger.error(f"[{persona.id}]   FAILED: all models exhausted")
+                    if bus:
+                        await bus.emit(DashboardEvent(
+                            type=EventType.PERSONA_FAILED, persona_id=persona.id,
+                            batch_id=batch_id, data={"error": result.error_message, "stage": "2/5"},
+                        ))
+                    raise RuntimeError(result.error_message)
             else:
-                # Not a model error or no backup — mark as FAILED
+                # Not a model error or no backups — mark as FAILED
                 result.status = RunStatus.FAILED
                 result.error_message = f"Agent returned 0 actions: {first_error[:300]}"
                 logger.error(f"[{persona.id}]   FAILED: 0 actions, error: {first_error[:200]}")

@@ -20,8 +20,19 @@ class Settings(BaseSettings):
     # OpenRouter
     openrouter_api_key: str
     openrouter_model: str = "google/gemma-3-27b-it:free"               # agent (vision)
-    openrouter_backup_model: str = "nvidia/nemotron-nano-12b-v2-vl:free"  # backup agent (vision)
+    openrouter_backup_models: str = (                                   # fallback chain (comma-separated)
+        "nvidia/nemotron-nano-12b-v2-vl:free,"
+        "deepseek/deepseek-r1-0528:free,"
+        "z-ai/glm-4.5-air:free,"
+        "arcee-ai/trinity-mini:free,"
+        "stepfun/step-3.5-flash:free"
+    )
     openrouter_eval_model: str = "openrouter/aurora-alpha"              # evaluation (fast reasoning)
+
+    @property
+    def backup_models_list(self) -> list[str]:
+        """Return backup models as a list, filtering out empty strings."""
+        return [m.strip() for m in self.openrouter_backup_models.split(",") if m.strip()]
 
     # Environment
     log_level: str = "INFO"
