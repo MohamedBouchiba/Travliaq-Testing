@@ -450,6 +450,8 @@ function connectSSE() {
   };
   evtSource.onerror = function() {
     document.getElementById('reconnecting').classList.add('show');
+    evtSource.close();
+    setTimeout(connectSSE, 3000);
   };
 }
 
@@ -699,7 +701,21 @@ function renderPanel() {
     <div class="event-log" id="eventLog">${renderEventLog()}</div>
   </div>`;
 
+  // Preserve collapsible open state across re-renders
+  const openSections = new Set();
+  panel.querySelectorAll('.collapsible-body.open').forEach(el => {
+    if (el.id) openSections.add(el.id);
+  });
+
   panel.innerHTML = html;
+
+  // Restore collapsible state
+  openSections.forEach(id => {
+    const el = document.getElementById(id);
+    const arrow = document.getElementById(id + '-arrow');
+    if (el) el.classList.add('open');
+    if (arrow) arrow.classList.add('open');
+  });
 
   // Draw radar chart
   const canvas = document.getElementById('radar');
@@ -1529,6 +1545,31 @@ fetch('/api/batch/status').then(r => r.json()).then(d => {
     renderAll();
   }
 }).catch(() => {});
+
+// Periodic polling fallback (5s) — keeps UI updated even if SSE is degraded
+setInterval(() => {
+  fetch('/api/batch/status').then(r => r.json()).then(d => {
+    if (!d.batch_id && !Object.keys(d.personas || {}).length) return;
+    // Merge without overwriting existing result_data
+    for (const [id, pData] of Object.entries(d.personas || {})) {
+      if (!state.personas[id]) { state.personas[id] = pData; continue; }
+      const existing = state.personas[id];
+      if (pData.result_data && !existing.result_data) existing.result_data = pData.result_data;
+      existing.status = pData.status;
+      existing.stage = pData.stage;
+      if (pData.score != null) existing.score = pData.score;
+      if (pData.error) existing.error = pData.error;
+    }
+    state.status = d.status;
+    state.batch_id = d.batch_id;
+    if (d.started_at && !startedAt) { startedAt = new Date(d.started_at); startElapsedTimer(); }
+    if (!selectedPersona) {
+      const ids = Object.keys(state.personas);
+      if (ids.length) selectedPersona = ids[0];
+    }
+    renderAll();
+  }).catch(() => {});
+}, 5000);
 </script>
 </body>
 </html>

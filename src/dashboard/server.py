@@ -54,8 +54,9 @@ def _reset_state() -> None:
 async def _state_updater() -> None:
     """Subscribe to EventBus and keep _batch_state in sync."""
     bus = get_event_bus()
-    if not bus:
-        return
+    while not bus:
+        await asyncio.sleep(1.0)
+        bus = get_event_bus()
     queue = bus.subscribe()
     while True:
         event: DashboardEvent = await queue.get()
@@ -194,13 +195,18 @@ async def index() -> HTMLResponse:
 @app.get("/api/stream")
 async def event_stream(request: Request) -> StreamingResponse:
     """SSE endpoint — real-time events from the orchestrator."""
-    bus = get_event_bus()
-    if not bus:
-        return JSONResponse({"error": "No active event bus"}, status_code=503)
-
-    queue = bus.subscribe()
 
     async def generate():
+        # Wait for event bus (may not exist yet if no batch running)
+        bus = get_event_bus()
+        while not bus:
+            if await request.is_disconnected():
+                return
+            yield ": waiting for batch\n\n"
+            await asyncio.sleep(2.0)
+            bus = get_event_bus()
+
+        queue = bus.subscribe()
         try:
             # Send current state snapshot for late-joining clients
             snapshot = json.dumps(
