@@ -202,6 +202,86 @@
   /* Reconnecting banner */
   .reconnecting { display: none; background: var(--yellow); color: #000; text-align: center; padding: 4px; font-size: 12px; font-weight: 500; }
   .reconnecting.show { display: block; }
+
+  /* Enhanced Persona Identity Card */
+  .persona-profile-enhanced { display: grid; grid-template-columns: 120px 1fr; gap: 20px; align-items: start; }
+  .persona-avatar-lg { width: 120px; height: 120px; border-radius: 50%; border: 4px solid var(--accent); background: var(--bg3); box-shadow: 0 0 20px rgba(59,130,246,0.15); }
+  .persona-role-quote { font-size: 14px; color: var(--text2); line-height: 1.6; margin-top: 12px; padding: 12px 16px; background: var(--bg); border-left: 4px solid var(--purple); border-radius: 0 var(--radius) var(--radius) 0; font-style: italic; }
+
+  /* Conversation style meters */
+  .conv-style-visual { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .style-meter { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 10px; background: var(--bg); border-radius: var(--radius); min-width: 80px; }
+  .style-meter .meter-label { font-size: 10px; color: var(--text3); text-transform: uppercase; }
+  .style-meter .meter-bar { width: 60px; height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+  .style-meter .meter-fill { height: 100%; border-radius: 2px; background: var(--accent); }
+  .style-meter .meter-value { font-size: 11px; color: var(--text2); font-weight: 500; }
+
+  /* Interests card */
+  .interests-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .interest-tag { font-size: 11px; padding: 4px 10px; border-radius: 12px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+  .interest-tag.destination { background: #14532d; color: #4ade80; }
+  .interest-tag.activity { background: #1e3a5f; color: #60a5fa; }
+  .interest-tag.avoided { background: #450a0a; color: #ef4444; text-decoration: line-through; }
+  .group-visual { display: flex; align-items: center; gap: 4px; margin-top: 6px; padding: 8px 12px; background: var(--bg); border-radius: var(--radius); }
+  .group-icon { font-size: 18px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .info-badge { font-size: 11px; padding: 4px 10px; border-radius: 12px; background: var(--bg); color: var(--text2); border: 1px solid var(--bg3); display: flex; align-items: center; gap: 4px; }
+  .budget-bar-container { margin-top: 8px; padding: 8px 12px; background: var(--bg); border-radius: var(--radius); }
+  .budget-bar-track { height: 8px; background: var(--bg3); border-radius: 4px; position: relative; margin-top: 4px; }
+  .budget-bar-fill { position: absolute; height: 100%; background: linear-gradient(90deg, var(--green), var(--yellow)); border-radius: 4px; }
+  .budget-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  /* KPI Metrics */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .kpi-item { padding: 12px; background: var(--bg); border-radius: var(--radius); text-align: center; border: 1px solid var(--bg3); }
+  .kpi-item .kpi-value { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .kpi-item .kpi-label { font-size: 11px; color: var(--text3); text-transform: uppercase; margin-top: 4px; }
+  .kpi-item .kpi-sub { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  /* SWOT Matrix */
+  .swot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .swot-quadrant { padding: 12px; border-radius: var(--radius); border: 1px solid; }
+  .swot-quadrant h4 { font-size: 12px; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .swot-quadrant ul { list-style: none; }
+  .swot-quadrant li { font-size: 12px; color: var(--text2); padding: 3px 0; padding-left: 14px; position: relative; line-height: 1.5; }
+  .swot-quadrant li::before { content: ''; position: absolute; left: 0; top: 8px; width: 6px; height: 6px; border-radius: 50%; }
+  .swot-strengths { background: rgba(34,197,94,0.05); border-color: rgba(34,197,94,0.3); }
+  .swot-strengths h4 { color: var(--green); }
+  .swot-strengths li::before { background: var(--green); }
+  .swot-weaknesses { background: rgba(239,68,68,0.05); border-color: rgba(239,68,68,0.3); }
+  .swot-weaknesses h4 { color: var(--red); }
+  .swot-weaknesses li::before { background: var(--red); }
+  .swot-opportunities { background: rgba(59,130,246,0.05); border-color: rgba(59,130,246,0.3); }
+  .swot-opportunities h4 { color: var(--accent); }
+  .swot-opportunities li::before { background: var(--accent); }
+  .swot-threats { background: rgba(234,179,8,0.05); border-color: rgba(234,179,8,0.3); }
+  .swot-threats h4 { color: var(--yellow); }
+  .swot-threats li::before { background: var(--yellow); }
+
+  /* Post-Execution Checklist */
+  .checklist { display: flex; flex-direction: column; gap: 8px; }
+  .checklist-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--bg); border-radius: var(--radius); border-left: 3px solid; }
+  .checklist-item.pass { border-left-color: var(--green); }
+  .checklist-item.fail { border-left-color: var(--red); }
+  .checklist-icon { font-size: 20px; flex-shrink: 0; }
+  .checklist-text { flex: 1; }
+  .checklist-text .cl-label { font-size: 13px; font-weight: 500; }
+  .checklist-text .cl-desc { font-size: 11px; color: var(--text3); margin-top: 1px; }
+
+  /* UX Feedback sections */
+  .ux-feedback-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  @media (max-width: 900px) { .ux-feedback-sections { grid-template-columns: 1fr; } }
+  .ux-section { padding: 10px 12px; border-radius: var(--radius); border-left: 3px solid; }
+  .ux-section h4 { font-size: 11px; text-transform: uppercase; margin-bottom: 6px; }
+  .ux-section p { font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .ux-good { background: rgba(34,197,94,0.05); border-left-color: var(--green); }
+  .ux-good h4 { color: var(--green); }
+  .ux-bad { background: rgba(239,68,68,0.05); border-left-color: var(--red); }
+  .ux-bad h4 { color: var(--red); }
+  .ux-threats { background: rgba(234,179,8,0.05); border-left-color: var(--yellow); }
+  .ux-threats h4 { color: var(--yellow); }
+  .ux-opportunities { background: rgba(59,130,246,0.05); border-left-color: var(--accent); }
+  .ux-opportunities h4 { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -404,6 +484,10 @@ function langFlag(lang) {
   if (lang === 'en') return '\uD83C\uDDEC\uD83C\uDDE7';
   return lang || '';
 }
+function langName(lang) {
+  const names = { fr: 'Fran\u00E7ais', en: 'English', es: 'Espa\u00F1ol', de: 'Deutsch' };
+  return names[lang] || lang?.toUpperCase() || '';
+}
 
 function renderSidebar() {
   const list = document.getElementById('personaList');
@@ -458,38 +542,48 @@ function renderPanel() {
   const rd = p.result_data;
   let html = '';
 
-  // 1. Persona Profile
-  html += renderPersonaProfile(sel, p);
+  // 1. Enhanced Persona Identity Card
+  html += renderPersonaProfileEnhanced(sel, p);
 
-  // 2. Error/Blockage Panel
+  // 2. Persona Interests & Preferences
+  html += renderPersonaInterests(sel);
+
+  // 3. Error/Blockage Panel
   html += renderErrorPanel(p);
 
-  // 3. Loop Alert
+  // 4. Loop Alert
   html += renderLoopAlert(p);
 
-  // 4. Stage Timeline
+  // 5. Stage Timeline
   html += renderStageTimeline(sel, p.stage, p.status);
 
-  // 5. Live Step Progress
+  // 6. Live Step Progress
   html += renderStepProgress(p);
 
-  // 6. Execution Stats
+  // 7. KPI Metrics Dashboard
+  if (rd) html += renderKPIDashboard(sel, p, rd);
+
+  // 8. Execution Stats
   html += renderExecutionStats(p);
 
-  // 7. Evaluation Card
+  // 9. Evaluation Card
   if (rd?.evaluation?.overall_score != null) {
     html += renderEvaluationCard(rd);
   }
 
-  // 8. Feedback (Retour d'experience)
-  if (rd?.evaluation) {
-    html += renderFeedback(rd);
-  }
+  // 10. SWOT Matrix
+  if (rd?.evaluation) html += renderSWOTMatrix(rd);
 
-  // 9. Conversation Log (collapsible)
+  // 11. Post-Execution Checklist
+  if (rd) html += renderPostExecChecklist(sel, p, rd);
+
+  // 12. Complete UX Feedback Card
+  if (rd?.evaluation) html += renderUXFeedback(rd);
+
+  // 13. Conversation Log (collapsible)
   html += renderConversationLog(rd);
 
-  // 10. Agent Thoughts (collapsible)
+  // 14. Agent Thoughts (collapsible)
   html += renderAgentThoughts(rd);
 
   // 11. Event Log
@@ -509,22 +603,41 @@ function renderPanel() {
 }
 
 // ---------------------------------------------------------------------------
-// Section 1: Persona Profile Card
+// Section 1: Enhanced Persona Identity Card
 // ---------------------------------------------------------------------------
-function renderPersonaProfile(id, p) {
+function renderConvStyleVisual(cs) {
+  const verbMap = { low: 25, medium: 55, high: 90 };
+  const formalMap = { formal: 90, mixed: 55, casual: 20 };
+  let html = '<div class="conv-style-visual">';
+  html += `<div class="style-meter"><span class="meter-label">Verbosit\u00E9</span><div class="meter-bar"><div class="meter-fill" style="width:${verbMap[cs.verbosity] || 50}%"></div></div><span class="meter-value">${cs.verbosity}</span></div>`;
+  html += `<div class="style-meter"><span class="meter-label">Formalit\u00E9</span><div class="meter-bar"><div class="meter-fill" style="width:${formalMap[cs.formality] || 50}%"></div></div><span class="meter-value">${cs.formality}</span></div>`;
+  const bools = [
+    { key: 'asks_questions', icon: '\u2753', label: 'Questions' },
+    { key: 'expresses_frustration', icon: '\uD83D\uDE24', label: 'Frustration' },
+    { key: 'changes_mind', icon: '\uD83D\uDD04', label: "Change d'avis" },
+  ];
+  bools.forEach(b => {
+    const active = cs[b.key];
+    html += `<div class="style-meter" style="${active ? '' : 'opacity:0.35'}"><span style="font-size:16px">${b.icon}</span><span class="meter-value">${b.label}</span></div>`;
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderPersonaProfileEnhanced(id, p) {
   const rd = p.result_data;
   const meta = personaMetadata[id];
   const runId = rd?.run_id || '';
   const model = rd?.meta?.llm_model_used || '';
-  const avatarUrl = `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(meta?.name || id)}`;
+  const avatarUrl = `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(meta?.name || id)}&backgroundColor=65c9ff,b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
 
   let html = `<div class="card">
-    <div class="persona-profile">
-      <img class="persona-avatar" src="${avatarUrl}" alt="${esc(meta?.name || id)}" />
+    <div class="persona-profile-enhanced">
+      <img class="persona-avatar-lg" src="${avatarUrl}" alt="${esc(meta?.name || id)}" />
       <div class="persona-header-info">
-        <div class="pname">${esc(meta?.name || id.replace(/_/g, ' '))}</div>
-        <div class="age-lang">${meta?.age ? meta.age + ' ans' : ''} ${meta?.language ? langFlag(meta.language) + ' ' + meta.language.toUpperCase() : ''}</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px">
+        <div class="pname" style="font-size:24px">${esc(meta?.name || id.replace(/_/g, ' '))}</div>
+        <div class="age-lang" style="font-size:14px">${meta?.age ? meta.age + ' ans' : ''} ${meta?.language ? langFlag(meta.language) + ' ' + langName(meta.language) : ''}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
           <span class="badge badge-${p.status}">${p.status.toUpperCase()}</span>
           ${p.used_backup_model ? '<span class="badge" style="background:#422006;color:#fbbf24;font-size:10px">BACKUP MODEL</span>' : ''}
         </div>
@@ -536,64 +649,26 @@ function renderPersonaProfile(id, p) {
       </div>
     </div>`;
 
-  // Role description
   if (meta?.role) {
-    html += `<div class="persona-role">${esc(meta.role)}</div>`;
+    html += `<div class="persona-role-quote">${esc(meta.role)}</div>`;
   }
 
-  // Personality traits
   if (meta?.personality_traits?.length) {
     html += `<div class="section-label">Traits de personnalit\u00E9</div>
       <div class="pills">${meta.personality_traits.map(t => `<span class="trait-pill">${esc(t)}</span>`).join('')}</div>`;
   }
 
-  // Conversation style
   if (meta?.conversation_style) {
-    const cs = meta.conversation_style;
-    const items = [];
-    const verbIcons = { low: '\uD83E\uDD10', medium: '\uD83D\uDDE3\uFE0F', high: '\uD83D\uDCAC' };
-    items.push(`<span class="conv-style-item">${verbIcons[cs.verbosity] || '\uD83D\uDDE3\uFE0F'} ${cs.verbosity}</span>`);
-    items.push(`<span class="conv-style-item">${cs.formality === 'formal' ? '\uD83C\uDFA9' : '\uD83D\uDE0E'} ${cs.formality}</span>`);
-    if (cs.asks_questions) items.push('<span class="conv-style-item">\u2753 Pose des questions</span>');
-    if (cs.expresses_frustration) items.push('<span class="conv-style-item">\uD83D\uDE24 Exprime frustration</span>');
-    if (cs.changes_mind) items.push('<span class="conv-style-item">\uD83D\uDD04 Change d\'avis</span>');
-    html += `<div class="section-label">Style de conversation</div><div class="conv-style-grid">${items.join('')}</div>`;
+    html += `<div class="section-label">Style de conversation</div>`;
+    html += renderConvStyleVisual(meta.conversation_style);
   }
 
-  // Travel profile
-  if (meta?.travel_profile) {
-    const tp = meta.travel_profile;
-    html += `<div class="section-label">Profil de voyage</div><div class="travel-detail-grid">`;
-    html += `<div class="travel-detail-item"><div class="td-label">Groupe</div><div class="td-value">${esc(tp.group_type)}</div></div>`;
-    if (tp.travelers) {
-      const tv = tp.travelers;
-      const parts = [];
-      if (tv.adults) parts.push(`${tv.adults} adulte${tv.adults > 1 ? 's' : ''}`);
-      if (tv.children) parts.push(`${tv.children} enfant${tv.children > 1 ? 's' : ''}`);
-      if (tv.infants) parts.push(`${tv.infants} b\u00E9b\u00E9${tv.infants > 1 ? 's' : ''}`);
-      html += `<div class="travel-detail-item"><div class="td-label">Voyageurs</div><div class="td-value">${parts.join(', ')}</div></div>`;
-    }
-    html += `<div class="travel-detail-item"><div class="td-label">Budget</div><div class="td-value">${esc(tp.budget_range)}</div></div>`;
-    html += `<div class="travel-detail-item"><div class="td-label">Type</div><div class="td-value">${esc(tp.trip_type)}</div></div>`;
-    if (tp.flexibility) html += `<div class="travel-detail-item"><div class="td-label">Flexibilit\u00E9</div><div class="td-value">${esc(tp.flexibility)}</div></div>`;
-    if (tp.preferred_month) html += `<div class="travel-detail-item"><div class="td-label">Mois pr\u00E9f\u00E9r\u00E9</div><div class="td-value">${esc(tp.preferred_month)}</div></div>`;
-    if (tp.trip_duration) html += `<div class="travel-detail-item"><div class="td-label">Dur\u00E9e</div><div class="td-value">${esc(tp.trip_duration)}</div></div>`;
-    html += '</div>';
-    if (tp.preferred_destinations?.length) {
-      html += `<div style="margin-top:6px"><div class="td-label" style="font-size:10px;color:var(--text3);text-transform:uppercase">Destinations pr\u00E9f\u00E9r\u00E9es</div><div class="pills">${tp.preferred_destinations.map(d => `<span class="pill" style="border:1px solid var(--green);color:var(--green)">${esc(d)}</span>`).join('')}</div></div>`;
-    }
-    if (tp.avoided?.length) {
-      html += `<div style="margin-top:4px"><div class="td-label" style="font-size:10px;color:var(--text3);text-transform:uppercase">\u00C0 \u00E9viter</div><div class="pills">${tp.avoided.map(d => `<span class="pill" style="border:1px solid var(--red);color:var(--red)">${esc(d)}</span>`).join('')}</div></div>`;
-    }
-  }
-
-  // Conversation goals
+  // Conversation goals timeline (send_logs now visible)
   if (meta?.conversation_goals?.length) {
     const phasesReached = rd?.execution?.phases_reached || [];
     const isDone = p.status === 'completed' || p.status === 'timeout' || p.status === 'failed';
     html += `<div class="section-label">Objectifs de conversation</div><div class="goals-timeline">`;
     meta.conversation_goals.forEach(g => {
-      if (g.phase === 'send_logs') return;
       const reached = phasesReached.includes(g.phase);
       const indicator = isDone ? (reached ? '\u2705' : '\u274C') : '\u23F3';
       html += `<div class="goal-row">
@@ -607,12 +682,82 @@ function renderPersonaProfile(id, p) {
     html += '</div>';
   }
 
-  // Weight overrides
   if (meta?.evaluation_weight_overrides && Object.keys(meta.evaluation_weight_overrides).length) {
     html += `<div class="section-label">Pond\u00E9rations d'\u00E9valuation</div><div class="weight-badges">`;
     for (const [axis, weight] of Object.entries(meta.evaluation_weight_overrides)) {
       html += `<span class="weight-badge">${axis.replace(/_/g, ' ')} x${weight}</span>`;
     }
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+// ---------------------------------------------------------------------------
+// Section 1b: Persona Interests & Preferences
+// ---------------------------------------------------------------------------
+function renderPersonaInterests(id) {
+  const meta = personaMetadata[id];
+  if (!meta?.travel_profile) return '';
+  const tp = meta.travel_profile;
+
+  let html = `<div class="card"><h3>Centres d'int\u00E9r\u00EAt & Pr\u00E9f\u00E9rences</h3>`;
+
+  if (tp.travelers) {
+    const tv = tp.travelers;
+    html += '<div class="group-visual">';
+    for (let i = 0; i < (tv.adults || 0); i++) html += '<span class="group-icon">\uD83E\uDDD1</span>';
+    for (let i = 0; i < (tv.children || 0); i++) html += '<span class="group-icon">\uD83E\uDDD2</span>';
+    for (let i = 0; i < (tv.infants || 0); i++) html += '<span class="group-icon">\uD83D\uDC76</span>';
+    const parts = [];
+    if (tv.adults) parts.push(`${tv.adults} adulte${tv.adults > 1 ? 's' : ''}`);
+    if (tv.children) parts.push(`${tv.children} enfant${tv.children > 1 ? 's' : ''}`);
+    if (tv.infants) parts.push(`${tv.infants} b\u00E9b\u00E9${tv.infants > 1 ? 's' : ''}`);
+    html += `<span style="margin-left:8px;font-size:13px;color:var(--text2)">${esc(tp.group_type)} \u2014 ${parts.join(', ')}</span>`;
+    html += '</div>';
+  }
+
+  html += '<div class="badge-row">';
+  if (tp.trip_type) html += `<span class="info-badge">\u2708\uFE0F ${esc(tp.trip_type)}</span>`;
+  if (tp.trip_duration) html += `<span class="info-badge">\uD83D\uDCC5 ${esc(tp.trip_duration)}</span>`;
+  if (tp.flexibility) html += `<span class="info-badge">\uD83D\uDD04 ${esc(tp.flexibility.replace(/_/g, ' '))}</span>`;
+  if (tp.preferred_month) html += `<span class="info-badge">\u2600\uFE0F ${esc(tp.preferred_month)}</span>`;
+  html += '</div>';
+
+  if (tp.budget_range) {
+    const budgetMatch = tp.budget_range.match(/(\d+)\s*-\s*(\d+)/);
+    if (budgetMatch) {
+      const lo = parseInt(budgetMatch[1]);
+      const hi = parseInt(budgetMatch[2]);
+      const maxBudget = 10000;
+      const leftPct = Math.min((lo / maxBudget) * 100, 95);
+      const widthPct = Math.min(((hi - lo) / maxBudget) * 100, 95 - leftPct);
+      html += `<div class="budget-bar-container">
+        <div class="td-label" style="font-size:10px;color:var(--text3);text-transform:uppercase">Budget: ${esc(tp.budget_range)}</div>
+        <div class="budget-bar-track"><div class="budget-bar-fill" style="left:${leftPct}%;width:${widthPct}%"></div></div>
+        <div class="budget-labels"><span>0</span><span>5000</span><span>10000 EUR</span></div>
+      </div>`;
+    } else {
+      html += `<div style="margin-top:8px"><span class="info-badge">\uD83D\uDCB0 ${esc(tp.budget_range)}</span></div>`;
+    }
+  }
+
+  if (tp.preferred_destinations?.length) {
+    html += `<div class="section-label">Destinations pr\u00E9f\u00E9r\u00E9es</div><div class="interests-grid">`;
+    tp.preferred_destinations.forEach(d => { html += `<span class="interest-tag destination">\uD83D\uDCCD ${esc(d)}</span>`; });
+    html += '</div>';
+  }
+
+  if (meta.personality_traits?.length) {
+    html += `<div class="section-label">Centres d'int\u00E9r\u00EAt</div><div class="interests-grid">`;
+    meta.personality_traits.forEach(t => { html += `<span class="interest-tag activity">\u2728 ${esc(t)}</span>`; });
+    html += '</div>';
+  }
+
+  if (tp.avoided?.length) {
+    html += `<div class="section-label">\u00C0 \u00E9viter</div><div class="interests-grid">`;
+    tp.avoided.forEach(d => { html += `<span class="interest-tag avoided">\u274C ${esc(d)}</span>`; });
     html += '</div>';
   }
 
@@ -834,35 +979,184 @@ function renderEvaluationCard(rd) {
 }
 
 // ---------------------------------------------------------------------------
-// Section 8: Feedback (Retour d'experience)
+// Section 7b: KPI Metrics Dashboard
 // ---------------------------------------------------------------------------
-function renderFeedback(rd) {
+function renderKPIDashboard(id, p, rd) {
+  const meta = personaMetadata[id];
+  const ex = rd.execution || {};
+  const eval_ = rd.evaluation || {};
+  const timing = rd.timing || {};
+
+  const totalGoals = meta?.conversation_goals?.length || 1;
+  const phasesReached = ex.phases_reached || [];
+  const phaseCompletion = Math.round((phasesReached.length / totalGoals) * 100);
+
+  const totalSteps = ex.total_steps || 0;
+  const totalMessages = ex.total_messages || 0;
+  const convDensity = totalSteps > 0 ? (totalMessages / totalSteps).toFixed(2) : '-';
+
+  const widgetsUsed = (ex.widgets_interacted || []).length;
+  const expectedWidgets = meta?.conversation_goals
+    ? meta.conversation_goals.reduce((sum, g) => sum + (g.widget_interactions || []).length, 0)
+    : 1;
+  const widgetRate = expectedWidgets > 0 ? Math.round((widgetsUsed / expectedWidgets) * 100) : 0;
+
+  const duration = timing.duration_seconds;
+  const timePerPhase = (duration && phasesReached.length > 0)
+    ? (duration / phasesReached.length).toFixed(0)
+    : '-';
+
+  const overall = eval_.overall_score;
+
+  return `<div class="card">
+    <h3>KPI Metrics</h3>
+    <div class="kpi-grid">
+      <div class="kpi-item">
+        <div class="kpi-value" style="color:${phaseCompletion >= 80 ? 'var(--green)' : phaseCompletion >= 50 ? 'var(--yellow)' : 'var(--red)'}">${phaseCompletion}%</div>
+        <div class="kpi-label">Phase Completion</div>
+        <div style="font-size:10px;color:var(--text3)">${phasesReached.length}/${totalGoals} phases</div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-value">${convDensity}</div>
+        <div class="kpi-label">Conv. Density</div>
+        <div style="font-size:10px;color:var(--text3)">messages/steps</div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-value" style="color:${widgetRate >= 70 ? 'var(--green)' : widgetRate >= 40 ? 'var(--yellow)' : 'var(--red)'}">${widgetRate}%</div>
+        <div class="kpi-label">Widget Interaction</div>
+        <div style="font-size:10px;color:var(--text3)">${widgetsUsed}/${expectedWidgets} widgets</div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-value">${timePerPhase}${timePerPhase !== '-' ? 's' : ''}</div>
+        <div class="kpi-label">Time / Phase</div>
+        <div style="font-size:10px;color:var(--text3)">${duration ? duration.toFixed(0) + 's total' : '-'}</div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-value">${totalSteps || '-'}</div>
+        <div class="kpi-label">Total Steps</div>
+        <div style="font-size:10px;color:var(--text3)">${totalMessages} messages</div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-value" style="color:${overall != null ? scoreColor(overall) : 'var(--text2)'}">${overall != null ? overall.toFixed(1) : '-'}</div>
+        <div class="kpi-label">Overall Score</div>
+        <div style="font-size:10px;color:var(--text3)">/10</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Section 8: SWOT Matrix
+// ---------------------------------------------------------------------------
+function renderSWOTMatrix(rd) {
+  const eval_ = rd.evaluation || {};
+  const strengths = eval_.strengths || [];
+  const weaknesses = eval_.frustration_points || [];
+  const opportunities = eval_.improvement_suggestions || [];
+  const threats = eval_.threats || [];
+
+  if (!strengths.length && !weaknesses.length && !opportunities.length && !threats.length) return '';
+
+  function renderQuadrant(title, icon, items, cls) {
+    const listHtml = items.length
+      ? `<ul>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`
+      : `<div style="font-size:11px;color:var(--text3);font-style:italic">Aucune donn\u00E9e</div>`;
+    return `<div class="swot-quadrant ${cls}"><h4>${icon} ${title}</h4>${listHtml}</div>`;
+  }
+
+  return `<div class="card">
+    <h3>Analyse SWOT</h3>
+    <div class="swot-grid">
+      ${renderQuadrant('Forces', '\uD83D\uDCAA', strengths, 'swot-strengths')}
+      ${renderQuadrant('Faiblesses', '\u26A0', weaknesses, 'swot-weaknesses')}
+      ${renderQuadrant('Opportunit\u00E9s', '\uD83D\uDE80', opportunities, 'swot-opportunities')}
+      ${renderQuadrant('Menaces', '\uD83D\uDEE1\uFE0F', threats, 'swot-threats')}
+    </div>
+  </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Section 9: Post-Execution Checklist
+// ---------------------------------------------------------------------------
+function renderPostExecChecklist(id, p, rd) {
+  const meta = personaMetadata[id];
+  const ex = rd.execution || {};
+  const eval_ = rd.evaluation || {};
+  const phasesReached = ex.phases_reached || [];
+
+  if (p.status !== 'completed' && p.status !== 'timeout' && p.status !== 'failed') return '';
+
+  const reportSent = phasesReached.includes('send_logs');
+  const scores = eval_.scores || {};
+  const allJustified = AXES.every(ax => {
+    const v = scores[ax];
+    return v && typeof v === 'object' && !!v.justification;
+  });
+  const feedbackComplete = !!(eval_.summary) && allJustified;
+  const hasScreenshots = (rd.logs?.screenshot_paths?.length || 0) > 0;
+  const screenshotCount = rd.logs?.screenshot_paths?.length || 0;
+  const evalComplete = eval_.overall_score != null;
+
+  function checkItem(pass, label, desc) {
+    return `<div class="checklist-item ${pass ? 'pass' : 'fail'}">
+      <span class="checklist-icon">${pass ? '\u2705' : '\u274C'}</span>
+      <div class="checklist-text"><div class="cl-label">${label}</div><div class="cl-desc">${desc}</div></div>
+    </div>`;
+  }
+
+  return `<div class="card">
+    <h3>Checklist Post-Ex\u00E9cution</h3>
+    <div class="checklist">
+      ${checkItem(reportSent, 'Rapport envoy\u00E9', reportSent ? 'La phase send_logs a \u00E9t\u00E9 atteinte avec succ\u00E8s' : "Le persona n'a pas atteint la phase d'envoi du rapport")}
+      ${checkItem(feedbackComplete, 'Feedback complet re\u00E7u', feedbackComplete ? 'R\u00E9sum\u00E9 + justifications des 9 axes pr\u00E9sents' : 'R\u00E9sum\u00E9 ou justifications incomplets')}
+      ${checkItem(hasScreenshots, 'Screenshots captur\u00E9s', hasScreenshots ? screenshotCount + ' screenshot' + (screenshotCount > 1 ? 's' : '') + ' enregistr\u00E9' + (screenshotCount > 1 ? 's' : '') : 'Aucun screenshot captur\u00E9')}
+      ${checkItem(evalComplete, '\u00C9valuation compl\u00E8te', evalComplete ? 'Score global: ' + eval_.overall_score.toFixed(1) + '/10' : '\u00C9valuation non disponible')}
+    </div>
+  </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Section 10: Complete UX Feedback Card
+// ---------------------------------------------------------------------------
+function renderUXFeedback(rd) {
   const scores = rd.evaluation?.scores || {};
   const hasJustifications = AXES.some(ax => getJustification(scores, ax));
   const personaName = rd.persona?.name || 'Persona';
   const meta = personaMetadata[rd.persona?.id];
+  const eval_ = rd.evaluation || {};
 
   let html = `<div class="card">
-    <h3 style="color:var(--purple)">Retour d'exp\u00E9rience de ${esc(personaName)}</h3>`;
+    <h3 style="color:var(--purple)">Ressenti UX Complet de ${esc(personaName)}</h3>`;
 
-  // Evaluation summary (Ressenti Humain)
-  if (rd.evaluation.summary) {
-    html += `<div style="margin-bottom:16px;padding:14px;background:var(--bg);border-radius:var(--radius);border-left:3px solid var(--purple);font-size:14px;color:var(--text);line-height:1.7;white-space:pre-wrap">${esc(rd.evaluation.summary)}</div>`;
+  if (eval_.summary) {
+    html += `<div style="margin-bottom:16px;padding:16px;background:var(--bg);border-radius:var(--radius);border-left:4px solid var(--purple);font-size:14px;color:var(--text);line-height:1.7;white-space:pre-wrap">${esc(eval_.summary)}</div>`;
   }
 
-  // Phase completion comparison
+  const strengths = eval_.strengths || [];
+  const frustrations = eval_.frustration_points || [];
+  const threats = eval_.threats || [];
+  const suggestions = eval_.improvement_suggestions || [];
+
+  if (strengths.length || frustrations.length || threats.length || suggestions.length) {
+    html += '<div class="ux-feedback-sections">';
+    if (strengths.length) html += `<div class="ux-section ux-good"><h4>\uD83D\uDFE2 Ce qui \u00E9tait bien</h4>${strengths.map(s => `<p>\u2022 ${esc(s)}</p>`).join('')}</div>`;
+    if (frustrations.length) html += `<div class="ux-section ux-bad"><h4>\uD83D\uDD34 Ce qui \u00E9tait mauvais</h4>${frustrations.map(s => `<p>\u2022 ${esc(s)}</p>`).join('')}</div>`;
+    if (threats.length) html += `<div class="ux-section ux-threats"><h4>\uD83D\uDFE0 Menaces per\u00E7ues</h4>${threats.map(s => `<p>\u2022 ${esc(s)}</p>`).join('')}</div>`;
+    if (suggestions.length) html += `<div class="ux-section ux-opportunities"><h4>\uD83D\uDD35 Opportunit\u00E9s</h4>${suggestions.map(s => `<p>\u2022 ${esc(s)}</p>`).join('')}</div>`;
+    html += '</div>';
+  }
+
+  // Phase completion comparison (send_logs now visible)
   const phasesReached = rd.execution?.phases_reached || [];
   if (meta?.conversation_goals?.length) {
-    html += `<h4 style="color:var(--text3);margin-top:12px">Phases compl\u00E9t\u00E9es</h4><div class="phase-comparison">`;
+    html += `<h4 style="color:var(--text3);margin-top:16px">Phases compl\u00E9t\u00E9es</h4><div class="phase-comparison">`;
     meta.conversation_goals.forEach(g => {
-      if (g.phase === 'send_logs') return;
       const reached = phasesReached.includes(g.phase);
       html += `<span class="phase-chip ${reached ? 'reached' : 'missed'}" title="${esc(g.goal || '')}">${reached ? '\u2705' : '\u274C'} ${esc(g.phase)}</span>`;
     });
     html += '</div>';
   }
 
-  // Per-axis justifications
   if (hasJustifications) {
     html += `<h4 style="color:var(--text3);margin-top:16px">Justifications par axe</h4>`;
     AXES.forEach(ax => {
@@ -879,22 +1173,8 @@ function renderFeedback(rd) {
     });
   }
 
-  // Strengths / Frustrations / Suggestions
-  if (rd.evaluation.strengths?.length) {
-    html += `<h4 style="margin-top:16px;color:var(--green)">Points forts</h4><ul class="detail-list strengths">${rd.evaluation.strengths.map(s => `<li>${esc(s)}</li>`).join('')}</ul>`;
-  }
-  if (rd.evaluation.frustration_points?.length) {
-    html += `<h4 style="margin-top:12px;color:var(--red)">Frustrations</h4><ul class="detail-list frustrations">${rd.evaluation.frustration_points.map(s => `<li>${esc(s)}</li>`).join('')}</ul>`;
-  }
-  if (rd.evaluation.improvement_suggestions?.length) {
-    html += `<h4 style="margin-top:12px;color:var(--accent)">Suggestions d'am\u00E9lioration</h4><ul class="detail-list suggestions">${rd.evaluation.improvement_suggestions.map(s => `<li>${esc(s)}</li>`).join('')}</ul>`;
-  }
-
-  html += '</div>';
-
-  // Screenshots gallery
   if (rd.logs?.screenshot_paths?.length) {
-    html += `<div class="card"><h3>Screenshots</h3><div class="screenshots-gallery">`;
+    html += `<h4 style="color:var(--text3);margin-top:16px">Screenshots</h4><div class="screenshots-gallery">`;
     rd.logs.screenshot_paths.forEach((sp, i) => {
       const urlPath = '/screenshots/' + sp.replace(/^output[\\/]screenshots[\\/]/, '').replace(/\\/g, '/');
       html += `<div class="screenshot-thumb" onclick="openScreenshot('${esc(urlPath)}')">
@@ -902,9 +1182,10 @@ function renderFeedback(rd) {
         <div class="screenshot-label">Step ${i}</div>
       </div>`;
     });
-    html += '</div></div>';
+    html += '</div>';
   }
 
+  html += '</div>';
   return html;
 }
 

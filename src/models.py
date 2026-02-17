@@ -67,6 +67,7 @@ class TestRunResult(BaseModel):
     strengths: List[str] = Field(default_factory=list)
     frustration_points: List[str] = Field(default_factory=list)
     improvement_suggestions: List[str] = Field(default_factory=list)
+    threats: List[str] = Field(default_factory=list)
 
     # Metadata
     config_snapshot: Optional[Dict[str, Any]] = None
@@ -91,6 +92,7 @@ class TestRunResult(BaseModel):
         self.strengths = evaluation.get("strengths", [])
         self.frustration_points = evaluation.get("frustration_points", [])
         self.improvement_suggestions = evaluation.get("improvement_suggestions", [])
+        self.threats = evaluation.get("threats", [])
 
     def to_json_dict(self) -> dict:
         """Serialize for JSON file output."""
@@ -133,6 +135,7 @@ class TestRunResult(BaseModel):
                 "strengths": self.strengths,
                 "frustration_points": self.frustration_points,
                 "improvement_suggestions": self.improvement_suggestions,
+                "threats": self.threats,
             },
             "logs": {
                 "conversation": self.conversation_log,

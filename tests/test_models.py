@@ -55,6 +55,7 @@ def test_merge_evaluation():
         "strengths": ["Fast responses", "Clear widgets"],
         "frustration_points": ["Map didn't update"],
         "improvement_suggestions": ["Better map integration"],
+        "threats": ["Competitor is faster", "Complex UI"],
     }
 
     result.merge_evaluation(evaluation)
@@ -66,6 +67,9 @@ def test_merge_evaluation():
     assert result.evaluation_summary == "Good experience overall."
     assert len(result.strengths) == 2
     assert len(result.frustration_points) == 1
+    assert len(result.threats) == 2
+    assert "Competitor is faster" in result.threats
+    assert result.score_justifications["fluidity"] == "Smooth flow"
 
 
 def test_to_json_dict():
@@ -93,8 +97,10 @@ def test_to_json_dict():
     assert data["timing"]["duration_seconds"] == 330.0
     assert data["status"] == "completed"
     assert data["execution"]["phases_reached"] == ["greeting", "preferences", "destination"]
-    assert data["evaluation"]["scores"]["fluidity"] == 0.0
+    assert data["evaluation"]["scores"]["fluidity"]["score"] == 0.0
+    assert data["evaluation"]["scores"]["fluidity"]["justification"] == ""
     assert data["evaluation"]["overall_score"] is None
+    assert data["evaluation"]["threats"] == []
 
 
 def test_to_json_dict_with_scores():
@@ -107,7 +113,10 @@ def test_to_json_dict_with_scores():
     result.scores.relevance = 8.0
     result.score_overall = 8.5
 
+    result.threats = ["Risk 1"]
+
     data = result.to_json_dict()
-    assert data["evaluation"]["scores"]["fluidity"] == 9.0
-    assert data["evaluation"]["scores"]["relevance"] == 8.0
+    assert data["evaluation"]["scores"]["fluidity"]["score"] == 9.0
+    assert data["evaluation"]["scores"]["relevance"]["score"] == 8.0
     assert data["evaluation"]["overall_score"] == 8.5
+    assert data["evaluation"]["threats"] == ["Risk 1"]

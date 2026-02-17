@@ -53,7 +53,7 @@ Tu dois DEVENIR ce persona et évaluer l'expérience de SON point de vue.
 9. personality_match — Le ton du chatbot s'adapte-t-il au style du persona ?
 
 Ensuite écris un "Ressenti Humain" de 2-3 paragraphes comme si tu ÉTAIS le persona.
-Liste les 3 principaux points forts, les 3 principales frustrations, et 3 suggestions d'amélioration.
+Liste les 3 principaux points forts, les 3 principales frustrations, 3 suggestions d'amélioration, et 3 menaces (éléments qui pourraient pousser l'utilisateur à abandonner la plateforme ou à choisir un concurrent).
 
 Réponds UNIQUEMENT en JSON valide avec cette structure exacte :
 {
@@ -72,7 +72,8 @@ Réponds UNIQUEMENT en JSON valide avec cette structure exacte :
   "evaluation_summary": "Ressenti humain de 2-3 paragraphes...",
   "strengths": ["point fort 1", "point fort 2", "point fort 3"],
   "frustration_points": ["frustration 1", "frustration 2", "frustration 3"],
-  "improvement_suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
+  "improvement_suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"],
+  "threats": ["menace 1", "menace 2", "menace 3"]
 }"""
 
 

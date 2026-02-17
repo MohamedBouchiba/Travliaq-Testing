@@ -273,6 +273,7 @@ async def list_personas() -> JSONResponse:
                 {
                     "phase": g.phase,
                     "goal": g.goal,
+                    "example_message": g.example_message,
                     "widget_interactions": g.widget_interactions,
                     "min_messages": g.min_messages,
                     "success_indicator": g.success_indicator,
