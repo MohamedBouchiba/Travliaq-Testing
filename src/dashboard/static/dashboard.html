@@ -634,11 +634,11 @@ function renderPanel() {
 
   if (Object.keys(state.personas).length === 0 && state.status === 'idle') {
     panel.innerHTML = '';
-    panel.appendChild(empty);
+    if (empty) panel.appendChild(empty);
     loadResultsBrowser(panel);
     return;
   }
-  if (empty.parentNode === panel) panel.removeChild(empty);
+  if (empty && empty.parentNode === panel) panel.removeChild(empty);
 
   const sel = selectedPersona;
   const p = sel ? state.personas[sel] : null;
