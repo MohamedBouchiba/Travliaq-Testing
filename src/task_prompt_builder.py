@@ -183,10 +183,11 @@ TRAVEL PROFILE:
 
 def _build_flow_section(persona: PersonaDefinition) -> str:
     """Generate the ordered conversation flow instructions."""
+    total_phases = len(persona.conversation_goals)
     if persona.language == "fr":
-        header = "\n=== DÉROULEMENT DE LA CONVERSATION ===\n\nSuis ces phases dans l'ordre. Reste dans ton personnage à chaque instant.\n"
+        header = f"\n=== DÉROULEMENT DE LA CONVERSATION ({total_phases} PHASES) ===\n\nSuis ces {total_phases} phases dans l'ordre. Tu DOIS toutes les compléter — ne t'arrête PAS avant la dernière phase. Reste dans ton personnage à chaque instant.\n"
     else:
-        header = "\n=== CONVERSATION FLOW ===\n\nFollow these phases in order. Stay in character at all times.\n"
+        header = f"\n=== CONVERSATION FLOW ({total_phases} PHASES) ===\n\nFollow these {total_phases} phases in order. You MUST complete ALL of them — do NOT stop before the last phase. Stay in character at all times.\n"
 
     phases = []
     for i, goal in enumerate(persona.conversation_goals, 1):
@@ -222,22 +223,34 @@ def _build_flow_section(persona: PersonaDefinition) -> str:
         phases.append(phase_block)
 
     if persona.language == "fr":
-        footer = """
+        footer = f"""
 RÈGLES DE RYTHME:
 - Attends que l'indicateur de frappe (3 points) disparaisse avant d'envoyer. Sois PATIENT — la réponse peut prendre jusqu'à 30 secondes.
 - Quand un widget apparaît, interagis avec lui AVANT de taper un message.
 - Envoie des messages naturels, pas des commandes robotiques.
 - Si l'assistant demande quelque chose, réponds dans ton personnage.
-- Essaie d'atteindre la phase finale, mais ne force pas si le chatbot va dans une autre direction.
+
+PROGRESSION — OBLIGATOIRE:
+- Tu as {total_phases} phases à compléter. Tu DOIS toutes les faire, surtout la DERNIÈRE (envoi du feedback).
+- Garde une trace mentale de ta progression : "Je suis à la phase X sur {total_phases}."
+- Si tu es bloqué sur une phase depuis plus de 3-4 échanges, passe à la phase suivante. Ne reste PAS coincé.
+- Si le chatbot dévie du sujet, recentre la conversation poliment vers ta prochaine phase.
+- Le test est considéré RÉUSSI uniquement si tu complètes la phase finale.
 """
     else:
-        footer = """
+        footer = f"""
 PACING RULES:
 - Wait for the typing indicator (3 dots) to disappear before sending. Be PATIENT — the response can take up to 30 seconds.
 - When a widget appears, interact with it BEFORE typing a message.
 - Send natural messages, not robotic commands.
 - If the assistant asks something, answer in character.
-- Try to reach the final phase, but don't force it if the chatbot goes in another direction.
+
+PROGRESSION — MANDATORY:
+- You have {total_phases} phases to complete. You MUST do ALL of them, especially the LAST one (feedback submission).
+- Keep mental track of your progress: "I am on phase X of {total_phases}."
+- If you are stuck on a phase for more than 3-4 exchanges, move on to the next phase. Do NOT get stuck.
+- If the chatbot goes off-topic, politely steer the conversation back to your next phase.
+- The test is considered PASSED only if you complete the final phase.
 """
     return header + "".join(phases) + footer
 

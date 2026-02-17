@@ -27,7 +27,9 @@ EXTEND_SYSTEM_MSG_FR = (
     "Quand tu vois des widgets (calendriers, sliders, boutons), interagis avec eux en cliquant. "
     "Attends que l'indicateur de frappe (3 points animés) disparaisse avant d'envoyer ton message. "
     "Après avoir tapé un message, APPUIE sur Entrée ou CLIQUE sur le bouton Envoyer. Ne laisse jamais un message non envoyé. "
-    "La carte à droite va se charger, observe-la mais concentre-toi sur le chat à gauche."
+    "La carte à droite va se charger, observe-la mais concentre-toi sur le chat à gauche. "
+    "IMPORTANT: Tu dois compléter TOUTES les phases de ta mission. Si tu es bloqué, passe à la phase suivante. "
+    "Ne t'arrête JAMAIS avant d'avoir terminé la dernière phase (envoi du feedback)."
 )
 
 EXTEND_SYSTEM_MSG_EN = (
@@ -36,7 +38,9 @@ EXTEND_SYSTEM_MSG_EN = (
     "When you see widgets (date pickers, sliders, buttons), interact with them by clicking. "
     "Wait for typing indicators (3 animated dots) to finish before sending your next message. "
     "After typing a message, PRESS Enter or CLICK the Send button. Never leave an unsent message. "
-    "The map on the right will load, observe it but focus on the left chat panel."
+    "The map on the right will load, observe it but focus on the left chat panel. "
+    "IMPORTANT: You must complete ALL phases of your mission. If stuck, move to the next phase. "
+    "NEVER stop before completing the last phase (feedback submission)."
 )
 
 
