@@ -188,8 +188,6 @@ async def run_single_persona(
                             },
                         ))
 
-        # Try primary model, fallback to backup on model-related errors
-        model_to_use = None  # None = use default from settings
         agent, browser = create_agent(persona, settings, yaml_config, step_callback=_on_step)
         logger.info(f"[{persona.id}]   Agent created OK (model: {settings.openrouter_model})")
 
@@ -204,25 +202,23 @@ async def run_single_persona(
         logger.info(f"[{persona.id}]   Target URL: {yaml_config.get('target', {}).get('planner_url_clean', 'N/A')}")
         logger.info(f"[{persona.id}]   Waiting for agent to navigate, chat, and interact with widgets...")
 
-        try:
-            history = await asyncio.wait_for(
-                agent.run(max_steps=max_steps),
-                timeout=timeout,
-            )
-        except (asyncio.TimeoutError, KeyboardInterrupt):
-            raise  # Don't fallback on timeout or user interrupt
-        except Exception as primary_err:
-            err_str = str(primary_err).lower()
-            model_keywords = ["404", "image input", "endpoint", "model", "vision", "invalid json", "eof"]
-            is_model_error = any(kw in err_str for kw in model_keywords)
+        history = await asyncio.wait_for(
+            agent.run(max_steps=max_steps),
+            timeout=timeout,
+        )
 
-            if is_model_error and settings.openrouter_backup_model:
-                logger.warning(
-                    f"[{persona.id}]   Primary model failed: {primary_err}"
-                )
-                logger.info(
-                    f"[{persona.id}]   Retrying with backup model: {settings.openrouter_backup_model}"
-                )
+        # --- Post-run: detect total model failure (browser-use swallows 404s) ---
+        if len(history.model_actions()) == 0 and history.has_errors():
+            all_errors = [str(e) for e in history.errors() if e]
+            first_error = all_errors[0] if all_errors else ""
+            model_kw = ["404", "model", "endpoint", "vision", "image input", "rate limit", "modelprovider"]
+            is_model_failure = any(kw in first_error.lower() for kw in model_kw)
+
+            if is_model_failure and settings.openrouter_backup_model:
+                logger.warning(f"[{persona.id}]   Primary model returned 0 actions ({len(all_errors)} errors)")
+                logger.warning(f"[{persona.id}]   First error: {first_error[:200]}")
+                logger.info(f"[{persona.id}]   Retrying with backup model: {settings.openrouter_backup_model}")
+
                 # Close failed agent/browser
                 try:
                     await agent.close()
@@ -233,15 +229,7 @@ async def run_single_persona(
 
                 # Reset loop detector for clean retry
                 loop_detector = LoopDetector()
-
-                model_to_use = settings.openrouter_backup_model
                 result.llm_model_used = settings.openrouter_backup_model
-                agent, browser = create_agent(
-                    persona, settings, yaml_config,
-                    step_callback=_on_step,
-                    model_override=settings.openrouter_backup_model,
-                )
-                logger.info(f"[{persona.id}]   Backup agent created OK")
 
                 if bus:
                     await bus.emit(DashboardEvent(
@@ -254,12 +242,28 @@ async def run_single_persona(
                         },
                     ))
 
+                agent, browser = create_agent(
+                    persona, settings, yaml_config,
+                    step_callback=_on_step,
+                    model_override=settings.openrouter_backup_model,
+                )
+                logger.info(f"[{persona.id}]   Backup agent created OK")
+
                 history = await asyncio.wait_for(
                     agent.run(max_steps=max_steps),
                     timeout=timeout,
                 )
             else:
-                raise  # Not a model error, propagate
+                # Not a model error or no backup — mark as FAILED
+                result.status = RunStatus.FAILED
+                result.error_message = f"Agent returned 0 actions: {first_error[:300]}"
+                logger.error(f"[{persona.id}]   FAILED: 0 actions, error: {first_error[:200]}")
+                if bus:
+                    await bus.emit(DashboardEvent(
+                        type=EventType.PERSONA_FAILED, persona_id=persona.id,
+                        batch_id=batch_id, data={"error": result.error_message, "stage": "2/5"},
+                    ))
+                raise RuntimeError(result.error_message)
 
         # --- Step 3: Extract results ---
         logger.info(f"[{persona.id}] [3/5] Agent finished. Extracting results...")
