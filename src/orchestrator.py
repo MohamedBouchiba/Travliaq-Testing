@@ -76,7 +76,7 @@ async def run_single_persona(
     logger.info(f"[{persona.id}] Group: {persona.travel_profile.group_type}")
     logger.info(f"[{persona.id}] Budget: {persona.travel_profile.budget_range}")
     logger.info(f"[{persona.id}] Phases planned: {[g.phase for g in persona.conversation_goals]}")
-    logger.info(f"[{persona.id}] LLM Agent: {settings.openrouter_model} | Eval: {settings.openrouter_eval_model}")
+    logger.info(f"[{persona.id}] LLM Agent: {settings.openrouter_model} | Backup: {settings.openrouter_backup_model} | Eval: {settings.openrouter_eval_model}")
 
     result = TestRunResult(
         run_id=f"{persona.id}-{run_id}",
@@ -188,8 +188,10 @@ async def run_single_persona(
                             },
                         ))
 
+        # Try primary model, fallback to backup on model-related errors
+        model_to_use = None  # None = use default from settings
         agent, browser = create_agent(persona, settings, yaml_config, step_callback=_on_step)
-        logger.info(f"[{persona.id}]   Agent created OK")
+        logger.info(f"[{persona.id}]   Agent created OK (model: {settings.openrouter_model})")
 
         # --- Step 2: Run agent ---
         logger.info(f"[{persona.id}] [2/5] Running agent (max_steps={max_steps}, timeout={timeout}s)...")
@@ -202,10 +204,62 @@ async def run_single_persona(
         logger.info(f"[{persona.id}]   Target URL: {yaml_config.get('target', {}).get('planner_url_clean', 'N/A')}")
         logger.info(f"[{persona.id}]   Waiting for agent to navigate, chat, and interact with widgets...")
 
-        history = await asyncio.wait_for(
-            agent.run(max_steps=max_steps),
-            timeout=timeout,
-        )
+        try:
+            history = await asyncio.wait_for(
+                agent.run(max_steps=max_steps),
+                timeout=timeout,
+            )
+        except (asyncio.TimeoutError, KeyboardInterrupt):
+            raise  # Don't fallback on timeout or user interrupt
+        except Exception as primary_err:
+            err_str = str(primary_err).lower()
+            model_keywords = ["404", "image input", "endpoint", "model", "vision", "invalid json", "eof"]
+            is_model_error = any(kw in err_str for kw in model_keywords)
+
+            if is_model_error and settings.openrouter_backup_model:
+                logger.warning(
+                    f"[{persona.id}]   Primary model failed: {primary_err}"
+                )
+                logger.info(
+                    f"[{persona.id}]   Retrying with backup model: {settings.openrouter_backup_model}"
+                )
+                # Close failed agent/browser
+                try:
+                    await agent.close()
+                except Exception:
+                    pass
+                agent = None
+                browser = None
+
+                # Reset loop detector for clean retry
+                loop_detector = LoopDetector()
+
+                model_to_use = settings.openrouter_backup_model
+                result.llm_model_used = settings.openrouter_backup_model
+                agent, browser = create_agent(
+                    persona, settings, yaml_config,
+                    step_callback=_on_step,
+                    model_override=settings.openrouter_backup_model,
+                )
+                logger.info(f"[{persona.id}]   Backup agent created OK")
+
+                if bus:
+                    await bus.emit(DashboardEvent(
+                        type=EventType.STAGE_RUN_AGENT, persona_id=persona.id,
+                        batch_id=batch_id, stage="2/5",
+                        data={
+                            "max_steps": max_steps, "timeout": timeout,
+                            "message": f"Retrying with backup model: {settings.openrouter_backup_model}",
+                            "fallback": True,
+                        },
+                    ))
+
+                history = await asyncio.wait_for(
+                    agent.run(max_steps=max_steps),
+                    timeout=timeout,
+                )
+            else:
+                raise  # Not a model error, propagate
 
         # --- Step 3: Extract results ---
         logger.info(f"[{persona.id}] [3/5] Agent finished. Extracting results...")

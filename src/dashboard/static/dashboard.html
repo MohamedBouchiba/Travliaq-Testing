@@ -233,6 +233,11 @@ function connectSSE() {
         state.personas[data.persona_id].stage = data.stage;
       }
       if (!selectedPersona) selectedPersona = data.persona_id;
+      // Track model fallback
+      if (t === 'stage_run_agent' && data.data?.fallback && data.persona_id && state.personas[data.persona_id]) {
+        state.personas[data.persona_id].used_backup_model = true;
+        state.personas[data.persona_id].backup_model_name = data.data?.message || '';
+      }
     } else if (t === 'persona_completed') {
       const d = data.data || {};
       if (data.persona_id && state.personas[data.persona_id]) {
@@ -455,7 +460,7 @@ function renderBanner(id, p) {
     </div>
     <div class="meta-grid">
       ${runId ? `<div class="meta-item"><div class="meta-label">Run ID</div><div class="meta-value">${esc(runId)}</div></div>` : ''}
-      ${model ? `<div class="meta-item"><div class="meta-label">LLM Model</div><div class="meta-value">${esc(model)}</div></div>` : ''}
+      ${model ? `<div class="meta-item"><div class="meta-label">LLM Model</div><div class="meta-value">${esc(model)}${p.used_backup_model ? ' <span class="badge" style="background:#f59e0b;font-size:10px">BACKUP</span>' : ''}</div></div>` : ''}
       ${p.duration != null ? `<div class="meta-item"><div class="meta-label">Duration</div><div class="meta-value">${formatDuration(Math.floor(p.duration))}</div></div>` : ''}
       ${meta?.group_type ? `<div class="meta-item"><div class="meta-label">Group</div><div class="meta-value">${esc(meta.group_type)}</div></div>` : ''}
       ${meta?.budget ? `<div class="meta-item"><div class="meta-label">Budget</div><div class="meta-value">${esc(meta.budget)}</div></div>` : ''}

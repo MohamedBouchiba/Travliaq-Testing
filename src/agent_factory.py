@@ -26,10 +26,10 @@ EXTEND_SYSTEM_MSG_EN = (
 )
 
 
-def create_llm(settings: Settings) -> ChatOpenAI:
+def create_llm(settings: Settings, model_override: str | None = None) -> ChatOpenAI:
     """Create an OpenRouter LLM instance for browser-use."""
     return ChatOpenAI(
-        model=settings.openrouter_model,
+        model=model_override or settings.openrouter_model,
         api_key=settings.openrouter_api_key,
         base_url="https://openrouter.ai/api/v1",
         max_retries=3,
@@ -69,13 +69,14 @@ def create_agent(
     settings: Settings,
     yaml_config: dict,
     step_callback=None,
+    model_override: str | None = None,
 ) -> tuple[Agent, Browser]:
     """Create a browser-use Agent configured for a persona.
 
     Returns (agent, browser) so the caller can close the browser when done.
     """
     task = build_task_prompt(persona, yaml_config)
-    llm = create_llm(settings)
+    llm = create_llm(settings, model_override=model_override)
     browser = create_browser(yaml_config)
 
     agent_cfg = yaml_config.get("agent", {})
