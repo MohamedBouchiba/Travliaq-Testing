@@ -127,6 +127,7 @@ def create_agent(
     yaml_config: dict,
     step_callback=None,
     model_override: str | None = None,
+    excluded_providers: set[str] | None = None,
 ) -> tuple[TravliaqAgent, Browser, str | None, PhaseTracker]:
     """Create a browser-use Agent configured for a persona.
 
@@ -144,10 +145,11 @@ def create_agent(
     # Agent-level fallback: pick first model from a DIFFERENT provider
     # so that a provider-wide rate limit doesn't cascade to fallback
     primary_provider = _get_provider(primary_model, settings)
+    excluded = (excluded_providers or set()) | {primary_provider}
     fallback_llm = None
     fallback_model_id = None
     for candidate in chain:
-        if _get_provider(candidate, settings) != primary_provider:
+        if _get_provider(candidate, settings) not in excluded:
             fallback_llm = create_llm_for_model(candidate, settings)
             fallback_model_id = candidate
             break
@@ -175,6 +177,7 @@ def create_agent(
         browser=browser,
         max_actions_per_step=agent_cfg.get("max_actions_per_step", 3),
         max_failures=agent_cfg.get("max_failures", 3),
+        final_response_after_failure=False,  # stop after exactly max_failures, no grace step
         use_vision=agent_cfg.get("use_vision", True),
         save_conversation_path=str(conv_dir),
         extend_system_message=extend_msg,

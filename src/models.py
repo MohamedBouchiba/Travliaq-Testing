@@ -72,6 +72,7 @@ class TestRunResult(BaseModel):
     # Metadata
     config_snapshot: Optional[Dict[str, Any]] = None
     llm_model_used: Optional[str] = None
+    exhausted_providers: List[str] = Field(default_factory=list)
 
     def merge_evaluation(self, evaluation: dict) -> None:
         """Merge evaluator LLM output into this result."""
@@ -145,5 +146,6 @@ class TestRunResult(BaseModel):
             "meta": {
                 "config_snapshot": self.config_snapshot,
                 "llm_model_used": self.llm_model_used,
+                "exhausted_providers": self.exhausted_providers,
             },
         }

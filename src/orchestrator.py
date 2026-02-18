@@ -124,6 +124,7 @@ async def run_single_persona(
 
     agent = None
     browser = None
+    rate_limited_providers: set[str] = set()  # tracks which providers hit 429 — shared with batch
 
     bus = get_event_bus()
 
@@ -263,7 +264,6 @@ async def run_single_persona(
 
             # Skip models already tried AND models from rate-limited providers
             tried = {primary_model, fallback_used} - {None}
-            rate_limited_providers = set()
             if is_rate_limit:
                 for tried_model in tried:
                     rate_limited_providers.add(_get_provider(tried_model, settings))
@@ -314,6 +314,7 @@ async def run_single_persona(
                         persona, settings, yaml_config,
                         step_callback=_on_step,
                         model_override=backup_model,
+                        excluded_providers=rate_limited_providers,
                     )
                     logger.info(f"[{persona.id}]   Backup agent created OK ({backup_model})")
 
@@ -502,6 +503,7 @@ async def run_single_persona(
             batch_id=batch_id, data=result.to_json_dict(),
         ))
 
+    result.exhausted_providers = sorted(rate_limited_providers)
     _log_banner(persona.id, f"RUN FINISHED — status={result.status.value}, score={result.score_overall or 'N/A'}")
     return result
 
@@ -545,6 +547,30 @@ async def run_batch(
         result = await run_single_persona(persona, settings, yaml_config, batch_id)
         results.append(result)
         logger.info(f"--- {persona.id}: {result.status.value} (score: {result.score_overall or 'N/A'}) ---\n")
+
+        # Abort batch if all providers exhausted — no point retrying
+        if len(result.exhausted_providers) >= 3:
+            remaining_count = len(personas) - i
+            if remaining_count > 0:
+                logger.warning(
+                    f"All LLM providers exhausted after {persona.id} — "
+                    f"skipping remaining {remaining_count} persona(s)"
+                )
+                for remaining_persona in personas[i:]:
+                    skip = TestRunResult(
+                        run_id=f"{remaining_persona.id}-skipped",
+                        persona_id=remaining_persona.id,
+                        persona_name=remaining_persona.name,
+                        persona_language=remaining_persona.language,
+                        batch_id=batch_id,
+                        status=RunStatus.FAILED,
+                        error_message="Skipped — all LLM providers exhausted",
+                        exhausted_providers=result.exhausted_providers,
+                    )
+                    skip.finished_at = datetime.now(timezone.utc)
+                    skip.duration_seconds = 0.0
+                    results.append(skip)
+                break
 
         # Cooldown between personas (skip after last one)
         if i < len(personas) and cooldown > 0:
