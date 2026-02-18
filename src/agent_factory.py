@@ -87,19 +87,28 @@ def create_llm_for_model(model_id: str, settings: Settings):
 
 
 def create_browser(yaml_config: dict) -> Browser:
-    """Create a Browser with configured profile."""
+    """Create a Browser with configured profile.
+
+    WebGL strategy:
+    - Headful: let Chromium auto-detect the native GPU (D3D11 on Windows).
+      Forcing SwiftShader would waste the hardware GPU.
+    - Headless / Docker: Chromium auto-selects SwiftShader. We add
+      --enable-unsafe-swiftshader as a safety net.
+    """
     browser_cfg = yaml_config["browser"]
+    headless = browser_cfg.get("headless", False)
+
+    args = [
+        "--enable-webgl",
+        "--ignore-gpu-blocklist",
+    ]
+    if headless:
+        args.append("--enable-unsafe-swiftshader")
+
     profile = BrowserProfile(
-        headless=browser_cfg.get("headless", False),
+        headless=headless,
         chromium_sandbox=False,
-        args=[
-            "--use-gl=angle",
-            "--use-angle=swiftshader-webgl",
-            "--enable-webgl",
-            "--ignore-gpu-blocklist",
-            "--enable-unsafe-swiftshader",
-            "--disable-gpu-sandbox",
-        ],
+        args=args,
         window_size={
             "width": browser_cfg.get("window_width", 1440),
             "height": browser_cfg.get("window_height", 900),
