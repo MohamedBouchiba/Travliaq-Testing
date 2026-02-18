@@ -14,7 +14,7 @@ agent:
   max_steps: 150
   max_actions_per_step: 3
   max_failures: 1  # fail fast — each step tests primary+fallback (2 providers); if both 429, retrying is pointless
-  use_vision: true
+  use_vision: auto  # 'auto' = screenshot on demand, 'true' = always, 'false' = never
   step_timeout: 180
 
 evaluation:

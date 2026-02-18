@@ -21,6 +21,9 @@ def _get_provider(model_id: str, settings: Settings | None = None) -> str:
     # Exact match for Groq — avoids routing OpenRouter meta-llama models to Groq
     if settings and model_id == settings.groq_model:
         return "groq"
+    # Exact match for SambaNova
+    if settings and settings.sambanova_api_key and model_id == settings.sambanova_model:
+        return "sambanova"
     if not settings and model_id.startswith(("meta-llama/", "openai/gpt-oss")):
         return "groq"  # legacy fallback without settings context
     return "openrouter"
@@ -60,9 +63,9 @@ def create_llm_for_model(model_id: str, settings: Settings):
         return ChatGoogle(
             model=model_id,
             api_key=settings.google_api_key,
-            retry_base_delay=10.0,  # 10s base (default 1.0) — respect Google rate limits
-            retry_max_delay=60.0,
-            max_retries=3,  # fail faster, let cross-provider fallback handle it
+            retry_base_delay=2.0,   # fail fast — let orchestrator handle provider switching
+            retry_max_delay=10.0,
+            max_retries=1,          # was 3 → 1: don't waste quota retrying dead provider
         )
 
     if settings.groq_api_key and model_id == settings.groq_model:
@@ -70,6 +73,17 @@ def create_llm_for_model(model_id: str, settings: Settings):
         return ChatGroq(
             model=model_id,
             api_key=settings.groq_api_key,
+            max_retries=1,  # was default 10 — don't burn TPD on retries
+        )
+
+    # SambaNova (Maverick — vision-capable, free)
+    if settings.sambanova_api_key and model_id == settings.sambanova_model:
+        logger.debug(f"Creating ChatOpenAI (SambaNova) for {model_id}")
+        return ChatOpenAI(
+            model=model_id,
+            api_key=settings.sambanova_api_key,
+            base_url="https://api.sambanova.ai/v1",
+            max_retries=1,
         )
 
     # OpenRouter fallback
@@ -78,7 +92,7 @@ def create_llm_for_model(model_id: str, settings: Settings):
         model=model_id,
         api_key=settings.openrouter_api_key,
         base_url="https://openrouter.ai/api/v1",
-        max_retries=3,
+        max_retries=1,  # was 3 — fail fast, let orchestrator switch providers
         default_headers={
             "HTTP-Referer": "https://travliaq.com",
             "X-Title": "Travliaq-Testing",
@@ -170,6 +184,12 @@ def create_agent(
         language=persona.language,
     )
 
+    # Normalize use_vision: YAML gives bool for true/false, string for 'auto'
+    use_vision_cfg = agent_cfg.get("use_vision", True)
+    if isinstance(use_vision_cfg, str):
+        v = use_vision_cfg.lower()
+        use_vision_cfg = True if v == "true" else (False if v == "false" else v)
+
     agent = TravliaqAgent(
         task=task,
         llm=llm,
@@ -178,7 +198,7 @@ def create_agent(
         max_actions_per_step=agent_cfg.get("max_actions_per_step", 3),
         max_failures=agent_cfg.get("max_failures", 3),
         final_response_after_failure=False,  # stop after exactly max_failures, no grace step
-        use_vision=agent_cfg.get("use_vision", True),
+        use_vision=use_vision_cfg,
         save_conversation_path=str(conv_dir),
         extend_system_message=extend_msg,
         register_new_step_callback=step_callback,

@@ -21,17 +21,22 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     groq_model: str = "meta-llama/llama-4-scout-17b-16e-instruct"
 
-    # OpenRouter (SECONDARY — fallback)
+    # OpenRouter (SECONDARY — fallback, vision-capable primary)
     openrouter_api_key: str = ""
-    openrouter_model: str = "google/gemma-3-12b-it"
+    openrouter_model: str = "nvidia/nemotron-nano-12b-v2-vl:free"  # vision-language model
 
     # Google Gemini (TERTIARY — free tier has low daily quota)
     google_api_key: str = ""
     google_model: str = "gemini-2.5-flash-lite"
     google_fallback_model: str = "gemini-2.5-flash"
+
+    # SambaNova (QUATERNARY — free, vision via Maverick)
+    sambanova_api_key: str = ""
+    sambanova_model: str = "Llama-4-Maverick-17B-128E-Instruct"
+
     openrouter_backup_models: str = (
+        "google/gemma-3-12b-it:free,"
         "google/gemma-3-27b-it:free,"
-        "nvidia/nemotron-nano-12b-v2-vl:free,"
         "deepseek/deepseek-r1-0528:free,"
         "z-ai/glm-4.5-air:free,"
         "arcee-ai/trinity-mini:free,"
@@ -52,7 +57,7 @@ class Settings(BaseSettings):
     def build_model_chain(self) -> list[str]:
         """Build ordered list of model IDs based on available API keys.
 
-        Priority: Groq primary > OpenRouter > Google Gemini > OpenRouter backups.
+        Priority: Groq > OpenRouter > Google Gemini > SambaNova > OpenRouter backups.
         """
         chain: list[str] = []
         if self.groq_api_key:
@@ -62,6 +67,8 @@ class Settings(BaseSettings):
         if self.google_api_key:
             chain.append(self.google_model)
             chain.append(self.google_fallback_model)
+        if self.sambanova_api_key:
+            chain.append(self.sambanova_model)
         if self.openrouter_api_key:
             chain.extend(self.openrouter_backup_models_list)
         return chain

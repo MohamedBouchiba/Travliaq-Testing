@@ -165,38 +165,61 @@ class TestGetProvider:
     def test_groq_model_exact_match(self):
         settings = MagicMock()
         settings.groq_model = "meta-llama/llama-4-scout-17b-16e-instruct"
+        settings.sambanova_api_key = ""
+        settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
         assert _get_provider("meta-llama/llama-4-scout-17b-16e-instruct", settings) == "groq"
 
     def test_openrouter_default(self):
         settings = MagicMock()
         settings.groq_model = "meta-llama/llama-4-scout-17b-16e-instruct"
+        settings.sambanova_api_key = ""
+        settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
         assert _get_provider("google/gemma-3-12b-it", settings) == "openrouter"
 
     def test_openrouter_backup_model(self):
         settings = MagicMock()
         settings.groq_model = "meta-llama/llama-4-scout-17b-16e-instruct"
+        settings.sambanova_api_key = ""
+        settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
         assert _get_provider("nvidia/nemotron-nano-12b-v2-vl:free", settings) == "openrouter"
+
+    def test_sambanova_model_exact_match(self):
+        settings = MagicMock()
+        settings.groq_model = "meta-llama/llama-4-scout-17b-16e-instruct"
+        settings.sambanova_api_key = "test_key"
+        settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
+        assert _get_provider("Llama-4-Maverick-17B-128E-Instruct", settings) == "sambanova"
+
+    def test_sambanova_without_key_falls_to_openrouter(self):
+        settings = MagicMock()
+        settings.groq_model = "meta-llama/llama-4-scout-17b-16e-instruct"
+        settings.sambanova_api_key = ""
+        settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
+        assert _get_provider("Llama-4-Maverick-17B-128E-Instruct", settings) == "openrouter"
 
 
 class TestExcludedProvidersFallback:
     """Test that excluded_providers filters fallback selection in create_agent."""
 
     def _mock_settings(self):
-        """Create settings mock with all 3 providers configured."""
+        """Create settings mock with all 4 providers configured."""
         settings = MagicMock()
         settings.groq_api_key = "gsk_test"
         settings.groq_model = "meta-llama/llama-4-scout-17b-16e-instruct"
         settings.openrouter_api_key = "sk-or-test"
-        settings.openrouter_model = "google/gemma-3-12b-it"
+        settings.openrouter_model = "nvidia/nemotron-nano-12b-v2-vl:free"
         settings.google_api_key = "AI_test"
         settings.google_model = "gemini-2.5-flash-lite"
         settings.google_fallback_model = "gemini-2.5-flash"
+        settings.sambanova_api_key = "sn_test"
+        settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
         settings.openrouter_backup_models_list = []
         settings.build_model_chain.return_value = [
             "meta-llama/llama-4-scout-17b-16e-instruct",
-            "google/gemma-3-12b-it",
+            "nvidia/nemotron-nano-12b-v2-vl:free",
             "gemini-2.5-flash-lite",
             "gemini-2.5-flash",
+            "Llama-4-Maverick-17B-128E-Instruct",
         ]
         return settings
 
@@ -227,8 +250,23 @@ class TestExcludedProvidersFallback:
             if _get_provider(candidate, settings) not in excluded:
                 fallback = candidate
                 break
-        assert fallback == "google/gemma-3-12b-it"
+        assert fallback == "nvidia/nemotron-nano-12b-v2-vl:free"
         assert _get_provider(fallback, settings) == "openrouter"
+
+    def test_excluded_groq_openrouter_picks_sambanova(self):
+        """With groq+openrouter excluded, Google primary picks SambaNova."""
+        settings = self._mock_settings()
+        chain = settings.build_model_chain()
+        primary = "gemini-2.5-flash-lite"
+        primary_provider = _get_provider(primary)
+        excluded = {"groq", "openrouter"} | {primary_provider}
+        fallback = None
+        for candidate in chain:
+            if _get_provider(candidate, settings) not in excluded:
+                fallback = candidate
+                break
+        assert fallback == "Llama-4-Maverick-17B-128E-Instruct"
+        assert _get_provider(fallback, settings) == "sambanova"
 
     def test_all_excluded_no_fallback(self):
         """With all providers excluded, no fallback is selected."""
@@ -236,7 +274,7 @@ class TestExcludedProvidersFallback:
         chain = settings.build_model_chain()
         primary = "gemini-2.5-flash-lite"
         primary_provider = _get_provider(primary)
-        excluded = {"groq", "openrouter"} | {primary_provider}
+        excluded = {"groq", "openrouter", "sambanova"} | {primary_provider}
         fallback = None
         for candidate in chain:
             if _get_provider(candidate, settings) not in excluded:

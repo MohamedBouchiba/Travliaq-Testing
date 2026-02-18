@@ -91,6 +91,7 @@ async def run_single_persona(
     settings: Settings,
     yaml_config: dict,
     batch_id: Optional[str] = None,
+    skip_health_check: bool = False,
 ) -> TestRunResult:
     """Execute a full test run for a single persona."""
     run_id = uuid.uuid4().hex[:8]
@@ -130,26 +131,29 @@ async def run_single_persona(
 
     try:
         # --- Step 0: LLM health check ---
-        logger.info(f"[{persona.id}] [0/5] Checking LLM connectivity...")
-        if bus:
-            await bus.emit(DashboardEvent(
-                type=EventType.STAGE_HEALTH_CHECK, persona_id=persona.id,
-                batch_id=batch_id, stage="0/5",
-                data={"message": "Checking LLM connectivity"},
-            ))
-        try:
-            _check_llm_health(settings)
-            logger.info(f"[{persona.id}]   LLM health check PASSED")
-        except Exception as e:
-            logger.error(f"[{persona.id}]   LLM health check FAILED after retries: {e}")
-            result.status = RunStatus.FAILED
-            result.error_message = f"LLM health check failed: {e}"
+        if skip_health_check:
+            logger.info(f"[{persona.id}] [0/5] Skipping health check (batch mode)")
+        else:
+            logger.info(f"[{persona.id}] [0/5] Checking LLM connectivity...")
             if bus:
                 await bus.emit(DashboardEvent(
-                    type=EventType.PERSONA_FAILED, persona_id=persona.id,
-                    batch_id=batch_id, data={"error": str(e), "stage": "0/5"},
+                    type=EventType.STAGE_HEALTH_CHECK, persona_id=persona.id,
+                    batch_id=batch_id, stage="0/5",
+                    data={"message": "Checking LLM connectivity"},
                 ))
-            return result
+            try:
+                _check_llm_health(settings)
+                logger.info(f"[{persona.id}]   LLM health check PASSED")
+            except Exception as e:
+                logger.error(f"[{persona.id}]   LLM health check FAILED after retries: {e}")
+                result.status = RunStatus.FAILED
+                result.error_message = f"LLM health check failed: {e}"
+                if bus:
+                    await bus.emit(DashboardEvent(
+                        type=EventType.PERSONA_FAILED, persona_id=persona.id,
+                        batch_id=batch_id, data={"error": str(e), "stage": "0/5"},
+                    ))
+                return result
 
         # --- Step 1: Create agent ---
         logger.info(f"[{persona.id}] [1/5] Creating browser-use agent...")
@@ -542,14 +546,23 @@ async def run_batch(
         "cooldown_between_personas_seconds", 30
     )
 
+    # Count configured providers for batch abort threshold
+    num_providers = sum(1 for k in [
+        settings.groq_api_key, settings.openrouter_api_key,
+        settings.google_api_key, getattr(settings, "sambanova_api_key", ""),
+    ] if k)
+
     for i, persona in enumerate(personas, 1):
         logger.info(f"\n--- Batch progress: {i}/{len(personas)} ---")
-        result = await run_single_persona(persona, settings, yaml_config, batch_id)
+        result = await run_single_persona(
+            persona, settings, yaml_config, batch_id,
+            skip_health_check=(i > 1),  # only check connectivity for first persona
+        )
         results.append(result)
         logger.info(f"--- {persona.id}: {result.status.value} (score: {result.score_overall or 'N/A'}) ---\n")
 
         # Abort batch if all providers exhausted — no point retrying
-        if len(result.exhausted_providers) >= 3:
+        if len(result.exhausted_providers) >= max(num_providers, 3):
             remaining_count = len(personas) - i
             if remaining_count > 0:
                 logger.warning(
