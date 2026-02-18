@@ -217,7 +217,10 @@ async def run_single_persona(
                             },
                         ))
 
-        agent, browser, fallback_used = create_agent(persona, settings, yaml_config, step_callback=_on_step)
+            # --- Phase tracking for TravliaqAgent ---
+            _update_phase_tracker(phase_tracker, persona, thinking, action_names)
+
+        agent, browser, fallback_used, phase_tracker = create_agent(persona, settings, yaml_config, step_callback=_on_step)
         logger.info(f"[{persona.id}]   Agent created OK (primary: {primary_model}, fallback: {fallback_used or 'none'})")
 
         # --- Step 2: Run agent ---
@@ -294,7 +297,7 @@ async def run_single_persona(
                             },
                         ))
 
-                    agent, browser, _ = create_agent(
+                    agent, browser, _, phase_tracker = create_agent(
                         persona, settings, yaml_config,
                         step_callback=_on_step,
                         model_override=backup_model,
@@ -572,6 +575,47 @@ async def run_batch(
         ))
 
     return results
+
+
+def _update_phase_tracker(phase_tracker, persona, thinking: str | None, action_names: list[str]) -> None:
+    """Update phase_tracker based on the agent's current thinking and actions.
+
+    Uses keyword matching against persona conversation_goals to estimate
+    which phase the agent has reached, and detects feedback submission.
+    """
+    if phase_tracker is None:
+        return
+
+    combined = " ".join(action_names).lower()
+    if thinking:
+        combined += " " + thinking.lower()
+
+    # Phase keyword map — same approach as _detect_phases but incremental
+    phase_keywords = {
+        "greeting": ["greeting", "bonjour", "hello", "salut"],
+        "preferences": ["préférence", "preference", "style", "intérêt", "interest", "slider"],
+        "destination": ["destination", "ville", "city", "pays", "country", "suggestion"],
+        "dates": ["date", "calendrier", "calendar", "datepicker"],
+        "travelers": ["voyageur", "traveler", "adulte", "adult", "enfant", "child"],
+        "logistics": ["aéroport", "airport", "vol", "flight", "aller-retour", "trip_type"],
+        "deep_conversation": ["question", "précis", "detail", "expliqu"],
+        "completion": ["récapitulatif", "recap", "recherche", "search", "result"],
+        "send_logs": ["nous aider", "feedback", "popup", "résumé", "summary"],
+    }
+
+    # Walk persona goals and find the highest matching phase index
+    for i, goal in enumerate(persona.conversation_goals):
+        if i <= phase_tracker.current_phase_index:
+            continue  # already past this phase
+        keywords = phase_keywords.get(goal.phase, [])
+        if keywords and any(kw in combined for kw in keywords):
+            phase_tracker.current_phase_index = i
+
+    # Detect feedback submission
+    feedback_keywords = ["nous aider", "feedback", "popup", "soumis", "submitted", "submit"]
+    if any(kw in combined for kw in feedback_keywords):
+        if "click" in combined or "cliqu" in combined or "input" in combined:
+            phase_tracker.feedback_submitted = True
 
 
 def _detect_phases(history, persona: PersonaDefinition) -> List[str]:

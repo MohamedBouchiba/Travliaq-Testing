@@ -11,7 +11,7 @@ browser:
   maximum_wait_page_load_time: 15
 
 agent:
-  max_steps: 100
+  max_steps: 150
   max_actions_per_step: 3
   max_failures: 3
   use_vision: true
@@ -21,7 +21,7 @@ evaluation:
   temperature: 0.3
 
 orchestration:
-  timeout_per_persona_seconds: 900
+  timeout_per_persona_seconds: 1200
   cooldown_between_personas_seconds: 30
   rate_limit_cooldown_seconds: 60
 

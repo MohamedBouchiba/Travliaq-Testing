@@ -3,12 +3,13 @@
 import logging
 from pathlib import Path
 
-from browser_use import Agent, Browser, ChatGoogle, ChatGroq, ChatOpenAI
+from browser_use import Browser, ChatGoogle, ChatGroq, ChatOpenAI
 from browser_use.browser import BrowserProfile
 
 from .config import Settings
 from .persona_loader import PersonaDefinition
 from .task_prompt_builder import build_task_prompt
+from .travliaq_agent import PhaseTracker, TravliaqAgent
 
 logger = logging.getLogger(__name__)
 
@@ -112,11 +113,11 @@ def create_agent(
     yaml_config: dict,
     step_callback=None,
     model_override: str | None = None,
-) -> tuple[Agent, Browser, str | None]:
+) -> tuple[TravliaqAgent, Browser, str | None, PhaseTracker]:
     """Create a browser-use Agent configured for a persona.
 
-    Returns (agent, browser, fallback_model_id) so the caller can close the
-    browser when done and knows which model was used as fallback.
+    Returns (agent, browser, fallback_model_id, phase_tracker) so the caller
+    can close the browser when done and track phase progress.
     """
     chain = settings.build_model_chain()
     if not chain:
@@ -148,7 +149,12 @@ def create_agent(
 
     extend_msg = EXTEND_SYSTEM_MSG_FR if persona.language == "fr" else EXTEND_SYSTEM_MSG_EN
 
-    agent = Agent(
+    phase_tracker = PhaseTracker(
+        total_phases=len(persona.conversation_goals),
+        language=persona.language,
+    )
+
+    agent = TravliaqAgent(
         task=task,
         llm=llm,
         fallback_llm=fallback_llm,
@@ -159,6 +165,7 @@ def create_agent(
         save_conversation_path=str(conv_dir),
         extend_system_message=extend_msg,
         register_new_step_callback=step_callback,
+        phase_tracker=phase_tracker,
     )
 
-    return agent, browser, fallback_model_id
+    return agent, browser, fallback_model_id, phase_tracker

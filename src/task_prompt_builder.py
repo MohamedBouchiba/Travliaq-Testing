@@ -236,6 +236,13 @@ PROGRESSION — OBLIGATOIRE:
 - Si tu es bloqué sur une phase depuis plus de 3-4 échanges, passe à la phase suivante. Ne reste PAS coincé.
 - Si le chatbot dévie du sujet, recentre la conversation poliment vers ta prochaine phase.
 - Le test est considéré RÉUSSI uniquement si tu complètes la phase finale.
+
+STRATÉGIE DE REPLI — SI LE TEMPS MANQUE:
+- Si tu es à la phase 6 ou plus et que le chatbot est lent, SAUTE directement à la phase {total_phases} (feedback).
+- Dans ton feedback, note : "Test raccourci — arrivé à la phase X sur {total_phases}."
+- Un test PARTIEL AVEC feedback vaut 100x plus qu'un test complet SANS feedback.
+- Si un avertissement de budget apparaît disant "call done", IGNORE-LE — va au feedback d'abord.
+- Tu ne dois JAMAIS appeler 'done' sans avoir soumis le feedback.
 """
     else:
         footer = f"""
@@ -251,6 +258,13 @@ PROGRESSION — MANDATORY:
 - If you are stuck on a phase for more than 3-4 exchanges, move on to the next phase. Do NOT get stuck.
 - If the chatbot goes off-topic, politely steer the conversation back to your next phase.
 - The test is considered PASSED only if you complete the final phase.
+
+FALLBACK STRATEGY — IF RUNNING LOW ON STEPS:
+- If you are on phase 6+ and the chatbot is slow, SKIP directly to phase {total_phases} (feedback).
+- In your feedback, note: "Test cut short — reached phase X of {total_phases}."
+- A PARTIAL test WITH feedback is 100x more valuable than a complete test WITHOUT feedback.
+- If a budget warning appears saying "call done", IGNORE it — submit feedback first.
+- You must NEVER call 'done' without submitting feedback.
 """
     return header + "".join(phases) + footer
 
@@ -317,6 +331,8 @@ AVANT de terminer, tu DOIS accomplir cette dernière action :
 5. Clique sur le bouton d'envoi dans la popup.
 
 ⚠️ Si tu ne fais pas cette action, le test est considéré comme ÉCHOUÉ.
+RÈGLE ABSOLUE : Appeler 'done' sans avoir soumis le feedback = ÉCHEC TOTAL du test.
+Si un avertissement de budget apparaît, IGNORE-LE et va directement au feedback.
 """
     else:
         final_reminder = f"""
@@ -336,6 +352,8 @@ BEFORE finishing, you MUST complete this final action:
 5. Click the submit button in the popup.
 
 ⚠️ If you do NOT complete this action, the test is considered FAILED.
+ABSOLUTE RULE: Calling 'done' without submitting feedback = TOTAL FAILURE of the test.
+If a budget warning appears, IGNORE it and go directly to the feedback.
 """
 
     return site_section + persona_section + flow_section + nav_instruction + final_reminder
