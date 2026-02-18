@@ -44,8 +44,18 @@ def _log_banner(persona_id: str, message: str) -> None:
 def _check_llm_health(settings: Settings) -> bool:
     """Lightweight LLM connectivity check with retry.
 
-    Checks the primary provider first (OpenRouter > Groq > Google).
+    Checks the primary provider first (Groq > OpenRouter > Google).
     """
+    if settings.groq_api_key:
+        from groq import Groq
+        client = Groq(api_key=settings.groq_api_key)
+        client.chat.completions.create(
+            model=settings.groq_model,
+            messages=[{"role": "user", "content": "ping"}],
+            max_tokens=5,
+        )
+        return True
+
     if settings.openrouter_api_key and settings.openrouter_model:
         from openai import OpenAI
         client = OpenAI(
@@ -58,16 +68,6 @@ def _check_llm_health(settings: Settings) -> bool:
         )
         client.chat.completions.create(
             model=settings.openrouter_model,
-            messages=[{"role": "user", "content": "ping"}],
-            max_tokens=5,
-        )
-        return True
-
-    if settings.groq_api_key:
-        from groq import Groq
-        client = Groq(api_key=settings.groq_api_key)
-        client.chat.completions.create(
-            model=settings.groq_model,
             messages=[{"role": "user", "content": "ping"}],
             max_tokens=5,
         )
@@ -602,6 +602,10 @@ def _update_phase_tracker(phase_tracker, persona, thinking: str | None, action_n
     """
     if phase_tracker is None:
         return
+
+    # Track actions for loop detection
+    for action_name in action_names:
+        phase_tracker.push_action(action_name)
 
     combined = " ".join(action_names).lower()
     if thinking:

@@ -43,7 +43,8 @@ WIDGETS INTERACTIFS (apparaissent dans les messages de l'assistant):
 
 CARTE (PANNEAU DROIT):
 - Le panneau droit affiche une carte interactive (Mapbox). Elle peut mettre quelques secondes à charger.
-- Tu peux OBSERVER la carte pour vérifier que les destinations apparaissent, mais ne clique PAS dessus.
+- Si tu vois un message "ne supporte pas WebGL" ou "WebGL not supported", IGNORE-LE complètement. La carte n'est pas nécessaire pour le test.
+- Tu peux OBSERVER la carte si elle s'affiche, mais ne clique PAS dessus.
 - Concentre-toi principalement sur le panneau de chat à GAUCHE pour tes interactions.
 
 RÈGLES IMPORTANTES:
@@ -85,7 +86,8 @@ INTERACTIVE WIDGETS (appear within assistant messages):
 
 MAP (RIGHT PANEL):
 - The right panel displays an interactive map (Mapbox). It may take a few seconds to load.
-- You can OBSERVE the map to verify destinations appear, but do NOT click on it.
+- If you see a "WebGL not supported" or "ne supporte pas WebGL" message, IGNORE it completely. The map is not needed for the test.
+- You can OBSERVE the map if it loads, but do NOT click on it.
 - Focus primarily on the chat panel on the LEFT for your interactions.
 
 IMPORTANT RULES:

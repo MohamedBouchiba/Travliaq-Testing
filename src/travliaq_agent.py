@@ -34,6 +34,9 @@ class PhaseTracker:
     current_phase_index: int = 0
     feedback_submitted: bool = False
     _phase_names: list[str] = field(default_factory=list)
+    # Loop detection: recent action names tracked by orchestrator step callback
+    _recent_actions: list[str] = field(default_factory=list)
+    _stuck_injected: bool = False
 
     @property
     def feedback_phase_index(self) -> int:
@@ -46,6 +49,19 @@ class PhaseTracker:
     @property
     def phases_remaining(self) -> int:
         return max(0, self.total_phases - self.current_phase_index)
+
+    def push_action(self, action_name: str) -> None:
+        """Track recent action for loop detection (keep last 6)."""
+        self._recent_actions.append(action_name)
+        if len(self._recent_actions) > 6:
+            self._recent_actions = self._recent_actions[-6:]
+
+    @property
+    def is_stuck_in_loop(self) -> bool:
+        """True if the last 3+ actions are identical."""
+        if len(self._recent_actions) < 3:
+            return False
+        return len(set(self._recent_actions[-3:])) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -114,6 +130,27 @@ class TravliaqAgent(Agent):
                     f"The final phase (feedback) is mandatory — don't forget it."
                 )
             self._message_manager._add_context_message(UserMessage(content=msg))
+
+        # -- Loop detection: break identical action loops ----------------------
+        if pt.is_stuck_in_loop and not pt._stuck_injected:
+            repeated = pt._recent_actions[-1] if pt._recent_actions else "unknown"
+            if pt.language == "fr":
+                msg = (
+                    f"⚠️ Tu es en BOUCLE — tu répètes l'action '{repeated}' depuis plusieurs étapes. "
+                    f"La page EST CHARGÉE. Le chat est visible à gauche avec le champ de texte en bas. "
+                    f"ARRÊTE de répéter cette action. CLIQUE sur le champ de texte et TAPE ton message MAINTENANT."
+                )
+            else:
+                msg = (
+                    f"⚠️ You are in a LOOP — you've been repeating '{repeated}' for multiple steps. "
+                    f"The page IS LOADED. The chat is visible on the left with the text input at the bottom. "
+                    f"STOP repeating this action. CLICK the text input and TYPE your message NOW."
+                )
+            logger.warning(f"[TravliaqAgent] Loop detected: '{repeated}' repeated 3+ times — injecting break")
+            self._message_manager._add_context_message(UserMessage(content=msg))
+            pt._stuck_injected = True  # only inject once to avoid spamming
+        elif not pt.is_stuck_in_loop:
+            pt._stuck_injected = False  # reset when loop breaks
 
     # -- Override 2: prevent DoneAgentOutput swap on last step ---------------
 
