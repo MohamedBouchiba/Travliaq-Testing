@@ -14,7 +14,7 @@ from tenacity import (
     before_sleep_log,
 )
 
-from .agent_factory import create_agent, create_llm_for_model
+from .agent_factory import _get_provider, create_agent, create_llm_for_model
 from .config import Settings
 from .evaluator import evaluate_run
 from .events import DashboardEvent, EventType, get_event_bus
@@ -261,9 +261,18 @@ async def run_single_persona(
                     ))
                 await asyncio.sleep(rl_cooldown)
 
-            # Skip models already tried by browser-use (primary + cross-provider fallback)
+            # Skip models already tried AND models from rate-limited providers
             tried = {primary_model, fallback_used} - {None}
-            remaining_models = [m for m in model_chain if m not in tried]
+            rate_limited_providers = set()
+            if is_rate_limit:
+                for tried_model in tried:
+                    rate_limited_providers.add(_get_provider(tried_model, settings))
+                logger.info(f"[{persona.id}]   Rate-limited providers: {rate_limited_providers}")
+
+            remaining_models = [
+                m for m in model_chain
+                if m not in tried and _get_provider(m, settings) not in rate_limited_providers
+            ]
             if is_model_failure and remaining_models:
                 logger.warning(f"[{persona.id}]   Primary + fallback returned 0 actions ({len(all_errors)} errors)")
                 logger.warning(f"[{persona.id}]   First error: {first_error[:200]}")
@@ -271,6 +280,10 @@ async def run_single_persona(
 
                 fallback_succeeded = False
                 for i, backup_model in enumerate(remaining_models, 1):
+                    # Skip if provider was rate-limited by an earlier backup
+                    if _get_provider(backup_model, settings) in rate_limited_providers:
+                        logger.info(f"[{persona.id}]   Skipping {backup_model} — provider rate-limited")
+                        continue
                     logger.info(f"[{persona.id}]   Trying backup model {i}/{len(remaining_models)}: {backup_model}")
 
                     # Close previous agent/browser
@@ -313,20 +326,12 @@ async def run_single_persona(
                     if len(history.model_actions()) == 0 and history.has_errors():
                         backup_errors = [str(e) for e in history.errors() if e]
                         logger.warning(f"[{persona.id}]   Backup {i}/{len(remaining_models)} also failed: {backup_errors[0][:150] if backup_errors else 'unknown'}")
-                        # Rate-limit cooldown before trying next backup
+                        # Track rate-limited provider to skip remaining same-provider models
                         backup_err_lower = backup_errors[0].lower() if backup_errors else ""
                         if "rate limit" in backup_err_lower or "429" in backup_err_lower:
-                            rl_cooldown = yaml_config.get("orchestration", {}).get(
-                                "rate_limit_cooldown_seconds", 60
-                            )
-                            logger.info(f"[{persona.id}]   Rate limit on backup — cooling down {rl_cooldown}s...")
-                            if bus:
-                                await bus.emit(DashboardEvent(
-                                    type=EventType.STAGE_RUN_AGENT, persona_id=persona.id,
-                                    batch_id=batch_id, stage="2/5",
-                                    data={"message": f"Rate limited — waiting {rl_cooldown}s"},
-                                ))
-                            await asyncio.sleep(rl_cooldown)
+                            blocked = _get_provider(backup_model, settings)
+                            rate_limited_providers.add(blocked)
+                            logger.info(f"[{persona.id}]   Provider '{blocked}' rate-limited — skipping remaining models from it")
                         continue  # try next backup
 
                     # This backup worked
