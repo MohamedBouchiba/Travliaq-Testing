@@ -7,7 +7,7 @@ browser:
   headless: false
   window_width: 1440
   window_height: 900
-  minimum_wait_page_load_time: 2
+  minimum_wait_page_load_time: 5
   maximum_wait_page_load_time: 15
 
 agent:

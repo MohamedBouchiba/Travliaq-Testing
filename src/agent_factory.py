@@ -90,10 +90,12 @@ def create_browser(yaml_config: dict) -> Browser:
         headless=browser_cfg.get("headless", False),
         chromium_sandbox=False,
         args=[
+            "--use-gl=angle",
             "--use-angle=swiftshader-webgl",
             "--enable-webgl",
             "--ignore-gpu-blocklist",
             "--enable-unsafe-swiftshader",
+            "--disable-gpu-sandbox",
         ],
         window_size={
             "width": browser_cfg.get("window_width", 1440),

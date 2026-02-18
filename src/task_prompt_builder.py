@@ -200,6 +200,13 @@ def _build_flow_section(persona: PersonaDefinition) -> str:
             else:
                 phase_block += f'  Starting message: "{goal.example_message}"\n'
 
+        # Phase 1 (greeting): note that FIRST ACTION block already sent this message
+        if i == 1 and goal.example_message:
+            if persona.language == "fr":
+                phase_block += "  (Tu as DÉJÀ envoyé ce message dans ta PREMIÈRE ACTION ci-dessus. Attends la réponse.)\n"
+            else:
+                phase_block += "  (You have ALREADY sent this message in your FIRST ACTION above. Wait for the response.)\n"
+
         if goal.widget_interactions:
             if persona.language == "fr":
                 phase_block += "  Interactions widgets:\n"
@@ -293,24 +300,50 @@ def build_task_prompt(persona: PersonaDefinition, yaml_config: dict) -> str:
     # Layer 3
     flow_section = _build_flow_section(persona)
 
-    # Navigation instruction
+    # First action block — placed FIRST in prompt for maximum attention
     first_goal = persona.conversation_goals[0] if persona.conversation_goals else None
-    if first_goal and first_goal.example_message:
-        nav_instruction = (
-            f"\nPREMIÈRE ACTION: Navigue vers {planner_url}\n"
-            f'Ensuite, tape le message suivant dans le champ de texte et envoie-le:\n'
-            f'"{first_goal.example_message}"\n'
-            if persona.language == "fr"
-            else f"\nFIRST ACTION: Navigate to {planner_url}\n"
-            f'Then type the following message in the text input and send it:\n'
-            f'"{first_goal.example_message}"\n'
-        )
+    first_message = first_goal.example_message if first_goal and first_goal.example_message else ""
+
+    if persona.language == "fr":
+        first_action = f"""
+##############################################
+# PREMIÈRE ACTION — COMMENCE ICI            #
+##############################################
+
+Tu es un testeur qui va interagir avec un chatbot de voyage. Voici tes premières actions EXACTES :
+
+1. NAVIGUE vers {planner_url}
+2. ATTENDS 5 secondes que la page charge complètement. Tu dois voir le panneau de chat à gauche avec le champ de texte en bas.
+3. CLIQUE sur le champ de texte (placeholder "Envoyer un message...") pour le sélectionner.
+4. TAPE le message suivant : "{first_message}"
+5. APPUIE sur ENTRÉE ou clique sur le bouton d'envoi (aria-label "Envoyer").
+6. ATTENDS la réponse du chatbot (indicateur de frappe = 3 points animés). Cela peut prendre 10-30 secondes.
+
+⚠️ Si tu ne vois PAS de réponse après 30 secondes, RETAPE ton message et renvoie-le.
+⚠️ Si le champ de texte affiche "Envoyer un message...", c'est le PLACEHOLDER — le champ est VIDE. Tape ton vrai message dedans.
+
+Ensuite, suis les instructions détaillées ci-dessous.
+"""
     else:
-        nav_instruction = (
-            f"\nPREMIÈRE ACTION: Navigue vers {planner_url}\n"
-            if persona.language == "fr"
-            else f"\nFIRST ACTION: Navigate to {planner_url}\n"
-        )
+        first_action = f"""
+##############################################
+# FIRST ACTION — START HERE                 #
+##############################################
+
+You are a tester who will interact with a travel planning chatbot. Here are your exact first actions:
+
+1. NAVIGATE to {planner_url}
+2. WAIT 5 seconds for the page to fully load. You should see the chat panel on the left with the text input at the bottom.
+3. CLICK on the text input (placeholder "Send a message...") to select it.
+4. TYPE the following message: "{first_message}"
+5. PRESS Enter or click the send button (aria-label "Send" or "Envoyer").
+6. WAIT for the chatbot's response (typing indicator = 3 animated dots). This can take 10-30 seconds.
+
+⚠️ If you do NOT see a response after 30 seconds, RETYPE your message and send it again.
+⚠️ If the text input shows "Send a message...", that is the PLACEHOLDER — the field is EMPTY. Type your actual message in it.
+
+Then follow the detailed instructions below.
+"""
 
     # Final reminder — placed LAST for maximum recency effect
     if persona.language == "fr":
@@ -356,4 +389,4 @@ ABSOLUTE RULE: Calling 'done' without submitting feedback = TOTAL FAILURE of the
 If a budget warning appears, IGNORE it and go directly to the feedback.
 """
 
-    return site_section + persona_section + flow_section + nav_instruction + final_reminder
+    return first_action + site_section + persona_section + flow_section + final_reminder

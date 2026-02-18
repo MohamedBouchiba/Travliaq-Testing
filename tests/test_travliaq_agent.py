@@ -1,9 +1,10 @@
-"""Tests for PhaseTracker and _update_phase_tracker."""
+"""Tests for PhaseTracker, _update_phase_tracker, and _build_on_step_end."""
 
-from unittest.mock import MagicMock
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.travliaq_agent import PhaseTracker
-from src.orchestrator import _update_phase_tracker
+from src.orchestrator import _update_phase_tracker, _build_on_step_end
 
 
 def _make_persona(phases=None):
@@ -115,3 +116,37 @@ class TestUpdatePhaseTracker:
         persona = _make_persona()
         _update_phase_tracker(pt, persona, "submitted the popup feedback form", ["click"])
         assert pt.feedback_submitted is True
+
+
+class TestBuildOnStepEnd:
+    def test_no_sleep_when_zero_failures(self):
+        callback = _build_on_step_end("test-persona")
+        agent = MagicMock()
+        agent.state.consecutive_failures = 0
+        with patch("src.orchestrator.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            asyncio.get_event_loop().run_until_complete(callback(agent))
+            mock_sleep.assert_not_called()
+
+    def test_sleeps_10s_on_first_failure(self):
+        callback = _build_on_step_end("test-persona")
+        agent = MagicMock()
+        agent.state.consecutive_failures = 1
+        with patch("src.orchestrator.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            asyncio.get_event_loop().run_until_complete(callback(agent))
+            mock_sleep.assert_called_once_with(10)
+
+    def test_sleeps_20s_on_second_failure(self):
+        callback = _build_on_step_end("test-persona")
+        agent = MagicMock()
+        agent.state.consecutive_failures = 2
+        with patch("src.orchestrator.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            asyncio.get_event_loop().run_until_complete(callback(agent))
+            mock_sleep.assert_called_once_with(20)
+
+    def test_caps_at_60s(self):
+        callback = _build_on_step_end("test-persona")
+        agent = MagicMock()
+        agent.state.consecutive_failures = 5  # 10 * 2^4 = 160 → capped at 60
+        with patch("src.orchestrator.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            asyncio.get_event_loop().run_until_complete(callback(agent))
+            mock_sleep.assert_called_once_with(60)

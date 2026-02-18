@@ -235,7 +235,7 @@ async def run_single_persona(
         logger.info(f"[{persona.id}]   Waiting for agent to navigate, chat, and interact with widgets...")
 
         history = await asyncio.wait_for(
-            agent.run(max_steps=max_steps),
+            agent.run(max_steps=max_steps, on_step_end=_build_on_step_end(persona.id)),
             timeout=timeout,
         )
 
@@ -305,7 +305,7 @@ async def run_single_persona(
                     logger.info(f"[{persona.id}]   Backup agent created OK ({backup_model})")
 
                     history = await asyncio.wait_for(
-                        agent.run(max_steps=max_steps),
+                        agent.run(max_steps=max_steps, on_step_end=_build_on_step_end(persona.id)),
                         timeout=timeout,
                     )
 
@@ -575,6 +575,23 @@ async def run_batch(
         ))
 
     return results
+
+
+def _build_on_step_end(persona_id: str):
+    """Create an on_step_end callback with exponential backoff on failures.
+
+    browser-use has zero internal sleep between consecutive failures. This
+    hook fires after each step (including failed ones) and injects a delay
+    proportional to the number of consecutive failures, giving rate-limited
+    APIs time to recover before the next attempt.
+    """
+    async def _on_step_end(agent):
+        failures = agent.state.consecutive_failures
+        if failures > 0:
+            delay = min(10 * (2 ** (failures - 1)), 60)  # 10s, 20s, 40s, cap 60s
+            logger.info(f"[{persona_id}] Backoff: {failures} consecutive failure(s) — waiting {delay}s")
+            await asyncio.sleep(delay)
+    return _on_step_end
 
 
 def _update_phase_tracker(phase_tracker, persona, thinking: str | None, action_names: list[str]) -> None:
