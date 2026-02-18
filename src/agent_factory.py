@@ -76,7 +76,7 @@ def create_llm_for_model(model_id: str, settings: Settings):
             max_retries=1,  # was default 10 — don't burn TPD on retries
         )
 
-    # SambaNova (Maverick — vision-capable, free)
+    # SambaNova (Maverick — vision-capable, free, 16K context)
     if settings.sambanova_api_key and model_id == settings.sambanova_model:
         logger.debug(f"Creating ChatOpenAI (SambaNova) for {model_id}")
         return ChatOpenAI(
@@ -84,6 +84,7 @@ def create_llm_for_model(model_id: str, settings: Settings):
             api_key=settings.sambanova_api_key,
             base_url="https://api.sambanova.ai/v1",
             max_retries=1,
+            max_completion_tokens=2048,  # 16K context — prompts are ~13K, leave room
         )
 
     # OpenRouter fallback

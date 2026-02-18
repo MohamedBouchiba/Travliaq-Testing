@@ -244,8 +244,27 @@ async def run_single_persona(
             timeout=timeout,
         )
 
-        # --- Post-run: detect total model failure (browser-use swallows 404s) ---
-        if len(history.model_actions()) == 0 and history.has_errors():
+        # --- Capture final page state (result of last action) ---
+        final_screenshot_b64 = None
+        try:
+            if agent and hasattr(agent, 'browser_session') and agent.browser_session:
+                final_bytes = await agent.browser_session.take_screenshot()
+                if final_bytes:
+                    import base64 as b64mod
+                    final_screenshot_b64 = b64mod.b64encode(final_bytes).decode('utf-8')
+        except Exception as e:
+            logger.debug(f"[{persona.id}]   Final screenshot failed: {e}")
+
+        # --- Post-run: detect model failure or early abort ---
+        # Widen trigger: fire backup chain if agent aborted early (< min_useful_steps)
+        # not just when 0 actions. Typical failure: navigate (1 action) → step 2 fails → agent stops.
+        min_useful_steps = yaml_config.get("agent", {}).get("min_useful_steps", 10)
+        agent_aborted_early = (
+            not history.is_done()
+            and history.has_errors()
+            and len(history.model_actions()) < min_useful_steps
+        )
+        if agent_aborted_early:
             all_errors = [str(e) for e in history.errors() if e]
             first_error = all_errors[0] if all_errors else ""
             model_kw = ["404", "model", "endpoint", "vision", "image input", "rate limit", "modelprovider", "json_invalid"]
@@ -403,8 +422,11 @@ async def run_single_persona(
             for i, thought in enumerate(result.agent_thoughts[:3]):
                 logger.info(f"[{persona.id}]   Thought {i+1}: {thought[:200]}...")
 
-        # Save screenshots
+        # Save screenshots (including final post-action screenshot if captured)
         screenshots = history.screenshots()
+        screenshots = list(screenshots or [])
+        if final_screenshot_b64:
+            screenshots.append(final_screenshot_b64)
         if screenshots:
             result.screenshot_paths = save_screenshots(screenshots, persona.id, run_id)
             logger.info(f"[{persona.id}]   Screenshots saved: {len(result.screenshot_paths)}")

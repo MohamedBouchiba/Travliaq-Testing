@@ -359,3 +359,67 @@ class TestBatchAbort:
         assert "Skipped" in results[1].error_message
         assert results[1].duration_seconds == 0.0
         assert results[2].persona_id == "persona3"
+
+
+class TestBackupChainTrigger:
+    """Test that backup chain fires when agent aborts early (< min_useful_steps)."""
+
+    @staticmethod
+    def _should_trigger_backup(is_done, has_errors, num_actions, min_useful_steps=10):
+        """Reproduce the orchestrator's backup chain trigger logic."""
+        return (
+            not is_done
+            and has_errors
+            and num_actions < min_useful_steps
+        )
+
+    def test_triggers_on_zero_actions(self):
+        """0 actions + errors → should trigger backup (original behaviour)."""
+        assert self._should_trigger_backup(
+            is_done=False, has_errors=True, num_actions=0
+        )
+
+    def test_triggers_on_few_actions(self):
+        """3 actions + errors + not done → should trigger backup."""
+        assert self._should_trigger_backup(
+            is_done=False, has_errors=True, num_actions=3
+        )
+
+    def test_triggers_at_boundary(self):
+        """9 actions (just under threshold) → should trigger."""
+        assert self._should_trigger_backup(
+            is_done=False, has_errors=True, num_actions=9
+        )
+
+    def test_no_trigger_at_threshold(self):
+        """10 actions (at threshold) → should NOT trigger."""
+        assert not self._should_trigger_backup(
+            is_done=False, has_errors=True, num_actions=10
+        )
+
+    def test_no_trigger_on_many_actions(self):
+        """15 actions + errors → should NOT trigger (agent made progress)."""
+        assert not self._should_trigger_backup(
+            is_done=False, has_errors=True, num_actions=15
+        )
+
+    def test_no_trigger_when_done(self):
+        """Agent called done() → should NOT trigger backup."""
+        assert not self._should_trigger_backup(
+            is_done=True, has_errors=True, num_actions=0
+        )
+
+    def test_no_trigger_without_errors(self):
+        """No errors → should NOT trigger backup."""
+        assert not self._should_trigger_backup(
+            is_done=False, has_errors=False, num_actions=3
+        )
+
+    def test_custom_threshold(self):
+        """Custom min_useful_steps threshold works."""
+        assert self._should_trigger_backup(
+            is_done=False, has_errors=True, num_actions=4, min_useful_steps=5
+        )
+        assert not self._should_trigger_backup(
+            is_done=False, has_errors=True, num_actions=5, min_useful_steps=5
+        )
