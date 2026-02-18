@@ -14,12 +14,15 @@ from .travliaq_agent import PhaseTracker, TravliaqAgent
 logger = logging.getLogger(__name__)
 
 
-def _get_provider(model_id: str) -> str:
-    """Identify LLM provider from model ID prefix."""
+def _get_provider(model_id: str, settings: Settings | None = None) -> str:
+    """Identify LLM provider from model ID."""
     if model_id.startswith("gemini"):
         return "google"
-    if model_id.startswith(("meta-llama/", "openai/gpt-oss")):
+    # Exact match for Groq — avoids routing OpenRouter meta-llama models to Groq
+    if settings and model_id == settings.groq_model:
         return "groq"
+    if not settings and model_id.startswith(("meta-llama/", "openai/gpt-oss")):
+        return "groq"  # legacy fallback without settings context
     return "openrouter"
 
 EXTEND_SYSTEM_MSG_FR = (
@@ -62,7 +65,7 @@ def create_llm_for_model(model_id: str, settings: Settings):
             max_retries=3,  # fail faster, let cross-provider fallback handle it
         )
 
-    if settings.groq_api_key and model_id.startswith(("meta-llama/", "openai/gpt-oss")):
+    if settings.groq_api_key and model_id == settings.groq_model:
         logger.debug(f"Creating ChatGroq for {model_id}")
         return ChatGroq(
             model=model_id,
@@ -131,11 +134,11 @@ def create_agent(
 
     # Agent-level fallback: pick first model from a DIFFERENT provider
     # so that a provider-wide rate limit doesn't cascade to fallback
-    primary_provider = _get_provider(primary_model)
+    primary_provider = _get_provider(primary_model, settings)
     fallback_llm = None
     fallback_model_id = None
     for candidate in chain:
-        if _get_provider(candidate) != primary_provider:
+        if _get_provider(candidate, settings) != primary_provider:
             fallback_llm = create_llm_for_model(candidate, settings)
             fallback_model_id = candidate
             break

@@ -28,7 +28,7 @@ class Settings(BaseSettings):
 
     # OpenRouter
     openrouter_api_key: str = ""
-    openrouter_model: str = "google/gemma-3-12b-it"
+    openrouter_model: str = "meta-llama/llama-3.2-11b-vision-instruct"
     openrouter_backup_models: str = (
         "google/gemma-3-27b-it:free,"
         "nvidia/nemotron-nano-12b-v2-vl:free,"
