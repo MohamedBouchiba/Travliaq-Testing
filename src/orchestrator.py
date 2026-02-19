@@ -281,11 +281,13 @@ async def run_single_persona(
         # --- Post-run: detect model failure or early abort ---
         # Widen trigger: fire backup chain if agent aborted early (< min_useful_steps)
         # not just when 0 actions. Typical failure: navigate (1 action) → step 2 fails → agent stops.
+        # Also catch "completed" runs with very few steps — max_failures can cause is_done()=True
+        # after just 2 steps, which previously bypassed the backup chain entirely.
         min_useful_steps = yaml_config.get("agent", {}).get("min_useful_steps", 10)
+        num_actions = len(history.model_actions())
         agent_aborted_early = (
-            not history.is_done()
-            and history.has_errors()
-            and len(history.model_actions()) < min_useful_steps
+            (not history.is_done() and history.has_errors() and num_actions < min_useful_steps)
+            or (history.is_done() and num_actions < min_useful_steps and num_actions > 0)
         )
         if agent_aborted_early:
             all_errors = [str(e) for e in history.errors() if e]

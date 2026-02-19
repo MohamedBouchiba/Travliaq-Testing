@@ -37,7 +37,7 @@ class Settings(BaseSettings):
 
     # Cerebras (free, fast inference, OpenAI-compatible)
     cerebras_api_key: str = ""
-    cerebras_model: str = "llama-3.3-70b"
+    cerebras_model: str = "llama3.1-8b"
 
     openrouter_backup_models: str = (
         "google/gemma-3-12b-it:free,"

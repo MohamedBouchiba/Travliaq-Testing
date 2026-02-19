@@ -215,7 +215,7 @@ class TestExcludedProvidersFallback:
         settings.sambanova_api_key = "sn_test"
         settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
         settings.cerebras_api_key = "csk_test"
-        settings.cerebras_model = "llama-3.3-70b"
+        settings.cerebras_model = "llama3.1-8b"
         settings.openrouter_backup_models_list = []
         settings.build_model_chain.return_value = [
             "meta-llama/llama-4-scout-17b-16e-instruct",
@@ -224,7 +224,7 @@ class TestExcludedProvidersFallback:
             "gemini-2.5-flash-lite",
             "gemini-2.5-flash",
             "Llama-4-Maverick-17B-128E-Instruct",
-            "llama-3.3-70b",
+            "llama3.1-8b",
         ]
         return settings
 
@@ -373,9 +373,8 @@ class TestBackupChainTrigger:
     def _should_trigger_backup(is_done, has_errors, num_actions, min_useful_steps=10):
         """Reproduce the orchestrator's backup chain trigger logic."""
         return (
-            not is_done
-            and has_errors
-            and num_actions < min_useful_steps
+            (not is_done and has_errors and num_actions < min_useful_steps)
+            or (is_done and num_actions < min_useful_steps and num_actions > 0)
         )
 
     def test_triggers_on_zero_actions(self):
@@ -408,8 +407,8 @@ class TestBackupChainTrigger:
             is_done=False, has_errors=True, num_actions=15
         )
 
-    def test_no_trigger_when_done(self):
-        """Agent called done() → should NOT trigger backup."""
+    def test_no_trigger_when_done_zero_actions(self):
+        """Agent done + 0 actions → should NOT trigger (handled by error path)."""
         assert not self._should_trigger_backup(
             is_done=True, has_errors=True, num_actions=0
         )
@@ -427,6 +426,24 @@ class TestBackupChainTrigger:
         )
         assert not self._should_trigger_backup(
             is_done=False, has_errors=True, num_actions=5, min_useful_steps=5
+        )
+
+    def test_low_step_done_triggers_backup(self):
+        """Agent done after 2 steps → should trigger backup (premature completion)."""
+        assert self._should_trigger_backup(
+            is_done=True, has_errors=False, num_actions=2
+        )
+
+    def test_normal_done_no_backup(self):
+        """Agent done after 15 steps → should NOT trigger (real completion)."""
+        assert not self._should_trigger_backup(
+            is_done=True, has_errors=False, num_actions=15
+        )
+
+    def test_done_at_threshold_no_backup(self):
+        """Agent done at exactly min_useful_steps → should NOT trigger."""
+        assert not self._should_trigger_backup(
+            is_done=True, has_errors=False, num_actions=10
         )
 
 
@@ -583,8 +600,8 @@ class TestCerebrasProvider:
         settings.sambanova_api_key = ""
         settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
         settings.cerebras_api_key = "csk-test"
-        settings.cerebras_model = "llama-3.3-70b"
-        assert _get_provider("llama-3.3-70b", settings) == "cerebras"
+        settings.cerebras_model = "llama3.1-8b"
+        assert _get_provider("llama3.1-8b", settings) == "cerebras"
 
     def test_cerebras_without_key_falls_to_openrouter(self):
         settings = MagicMock()
@@ -592,8 +609,8 @@ class TestCerebrasProvider:
         settings.sambanova_api_key = ""
         settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
         settings.cerebras_api_key = ""
-        settings.cerebras_model = "llama-3.3-70b"
-        assert _get_provider("llama-3.3-70b", settings) == "openrouter"
+        settings.cerebras_model = "llama3.1-8b"
+        assert _get_provider("llama3.1-8b", settings) == "openrouter"
 
     def test_cerebras_in_model_chain(self):
         """Cerebras appears in chain when key is configured."""
@@ -617,7 +634,7 @@ class TestCerebrasProvider:
             cerebras_api_key="",
         )
         chain = settings.build_model_chain()
-        assert "llama-3.3-70b" not in chain
+        assert "llama3.1-8b" not in chain
 
     def test_excluded_4_providers_picks_cerebras(self):
         """With groq+openrouter+sambanova excluded, Google primary picks Cerebras."""
@@ -626,14 +643,14 @@ class TestCerebrasProvider:
         settings.sambanova_api_key = "sn_test"
         settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
         settings.cerebras_api_key = "csk_test"
-        settings.cerebras_model = "llama-3.3-70b"
+        settings.cerebras_model = "llama3.1-8b"
         chain = [
             "meta-llama/llama-4-scout-17b-16e-instruct",
             "nvidia/nemotron-nano-12b-v2-vl:free",
             "gemini-2.5-flash-lite",
             "gemini-2.5-flash",
             "Llama-4-Maverick-17B-128E-Instruct",
-            "llama-3.3-70b",
+            "llama3.1-8b",
         ]
         excluded = {"groq", "openrouter", "sambanova", "google"}
         fallback = None
@@ -641,7 +658,7 @@ class TestCerebrasProvider:
             if _get_provider(candidate, settings) not in excluded:
                 fallback = candidate
                 break
-        assert fallback == "llama-3.3-70b"
+        assert fallback == "llama3.1-8b"
         assert _get_provider(fallback, settings) == "cerebras"
 
 
@@ -655,7 +672,7 @@ class TestProviderRotation:
         settings.sambanova_api_key = "sn_test"
         settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
         settings.cerebras_api_key = "csk_test"
-        settings.cerebras_model = "llama-3.3-70b"
+        settings.cerebras_model = "llama3.1-8b"
         settings.openrouter_paid_model = "bytedance-seed/seed-1.6-flash"
 
         chain = [
@@ -665,7 +682,7 @@ class TestProviderRotation:
             "gemini-2.5-flash-lite",                       # google
             "gemini-2.5-flash",                            # google (dup)
             "Llama-4-Maverick-17B-128E-Instruct",         # sambanova
-            "llama-3.3-70b",                               # cerebras
+            "llama3.1-8b",                               # cerebras
             "google/gemma-3-12b-it:free",                  # openrouter (dup)
         ]
 
@@ -709,7 +726,7 @@ class TestOpenRouterPaidProvider:
         settings.sambanova_api_key = ""
         settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
         settings.cerebras_api_key = ""
-        settings.cerebras_model = "llama-3.3-70b"
+        settings.cerebras_model = "llama3.1-8b"
         settings.openrouter_paid_model = "bytedance-seed/seed-1.6-flash"
         assert _get_provider("bytedance-seed/seed-1.6-flash", settings) == "openrouter_paid"
 
@@ -720,7 +737,7 @@ class TestOpenRouterPaidProvider:
         settings.sambanova_api_key = ""
         settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
         settings.cerebras_api_key = ""
-        settings.cerebras_model = "llama-3.3-70b"
+        settings.cerebras_model = "llama3.1-8b"
         settings.openrouter_paid_model = ""
         assert _get_provider("bytedance-seed/seed-1.6-flash", settings) == "openrouter"
 
