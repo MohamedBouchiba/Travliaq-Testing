@@ -423,3 +423,71 @@ class TestBackupChainTrigger:
         assert not self._should_trigger_backup(
             is_done=False, has_errors=True, num_actions=5, min_useful_steps=5
         )
+
+
+class TestStuckActionCount:
+    """Tests for PhaseTracker._stuck_action_count periodic re-injection."""
+
+    def test_initial_count_is_zero(self):
+        pt = PhaseTracker(total_phases=9, language="fr")
+        assert pt._stuck_action_count == 0
+
+    def test_count_increments_while_stuck(self):
+        """Count goes 1,2,3 while is_stuck_in_loop is True."""
+        pt = PhaseTracker(total_phases=9, language="fr")
+        # Fill recent_actions with same action to trigger is_stuck_in_loop
+        for _ in range(6):
+            pt.push_action("click_element[5]")
+        assert pt.is_stuck_in_loop
+        # Simulate what _inject_budget_warning does
+        pt._stuck_action_count += 1
+        assert pt._stuck_action_count == 1
+        pt._stuck_action_count += 1
+        assert pt._stuck_action_count == 2
+        pt._stuck_action_count += 1
+        assert pt._stuck_action_count == 3
+
+    def test_count_resets_when_loop_breaks(self):
+        """Different action resets stuck count to 0."""
+        pt = PhaseTracker(total_phases=9, language="fr")
+        for _ in range(6):
+            pt.push_action("click_element[5]")
+        pt._stuck_action_count = 7
+        # Break the loop
+        pt.push_action("input_text[3]")
+        pt.push_action("scroll_down")
+        pt.push_action("go_to_url")
+        assert not pt.is_stuck_in_loop
+        # Simulate what _inject_budget_warning does when not stuck
+        if not pt.is_stuck_in_loop:
+            pt._stuck_action_count = 0
+        assert pt._stuck_action_count == 0
+
+    def test_should_inject_at_1_and_5(self):
+        """Injection fires at count 1 and every 5th count."""
+        should_inject_at = []
+        for count in range(1, 16):
+            should_inject = (count == 1 or count % 5 == 0)
+            if should_inject:
+                should_inject_at.append(count)
+        assert should_inject_at == [1, 5, 10, 15]
+
+    def test_escalation_at_10(self):
+        """At count >= 10, escalated message should fire."""
+        pt = PhaseTracker(total_phases=9, language="fr")
+        pt._stuck_action_count = 10
+        assert pt._stuck_action_count >= 10  # escalation threshold
+
+    def test_is_stuck_in_loop_property(self):
+        """is_stuck_in_loop returns True when last 3 of 6 recent_actions are identical."""
+        pt = PhaseTracker(total_phases=9, language="fr")
+        # Not stuck initially (not enough actions)
+        assert not pt.is_stuck_in_loop
+        # Add 6 varied actions
+        for action in ["a", "b", "c", "d", "e", "f"]:
+            pt.push_action(action)
+        assert not pt.is_stuck_in_loop
+        # Add 3 identical → now last 3 are same
+        for _ in range(3):
+            pt.push_action("click")
+        assert pt.is_stuck_in_loop

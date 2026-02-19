@@ -33,21 +33,42 @@ class LoopDetector:
         self._repeat_threshold = repeat_threshold
         self._alternating_cycles = alternating_cycles
         self._detected_count = 0
+        self._suppressed_pattern: Optional[str] = None
 
     @property
     def detected_count(self) -> int:
         return self._detected_count
 
     def push(self, action_name: str) -> LoopDetection:
-        """Add an action and check for loops."""
+        """Add an action and check for loops.
+
+        Suppresses consecutive re-detections of the same ongoing pattern
+        (e.g., "click[5] x3" fires once; x4, x5, x6 are suppressed until
+        the pattern breaks).
+        """
         self._window.append(action_name)
         if len(self._window) > self._window_size:
             self._window = self._window[-self._window_size :]
 
         result = self._check()
         if result.detected:
+            # Extract stable key: "click[5]" from "click[5] x3"
+            base = result.pattern.rsplit(" x", 1)[0]
+            # Normalize alternating: "a <-> b" and "b <-> a" are the same loop
+            if result.pattern_type == "alternating" and " <-> " in base:
+                parts = base.split(" <-> ")
+                base = " <-> ".join(sorted(parts))
+            suppression_key = f"{result.pattern_type}:{base}"
+            if suppression_key == self._suppressed_pattern:
+                # Same ongoing pattern — suppress
+                return LoopDetection(detected=False, window=list(self._window))
+            self._suppressed_pattern = suppression_key
             self._detected_count += 1
-        return result
+            return result
+        else:
+            # Pattern broken — reset suppression
+            self._suppressed_pattern = None
+            return result
 
     def _check(self) -> LoopDetection:
         w = self._window

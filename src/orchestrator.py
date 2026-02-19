@@ -180,15 +180,19 @@ async def run_single_persona(
 
         async def _on_step(browser_state, agent_output, step_number):
             """Step callback: emit AGENT_STEP + loop detection."""
-            action_names = []
+            action_names = []  # element-qualified: "click_element[5]"
+            bare_names = []    # bare type keys: "click_element"
             if agent_output and hasattr(agent_output, "action") and agent_output.action:
                 for act in agent_output.action:
                     try:
                         act_dict = act.model_dump(exclude_unset=True)
-                        for key in act_dict:
-                            action_names.append(key)
+                        for key, params in act_dict.items():
+                            bare_names.append(key)
+                            action_names.append(_qualify_action_name(key, params))
                     except Exception:
-                        action_names.append(str(type(act).__name__))
+                        name = str(type(act).__name__)
+                        bare_names.append(name)
+                        action_names.append(name)
 
             url = browser_state.url if browser_state and hasattr(browser_state, "url") else None
             thinking = None
@@ -209,25 +213,30 @@ async def run_single_persona(
                     },
                 ))
 
+            # Loop detection: push qualified names, emit at most 1 event per step
+            step_detection = None
             for action_name in action_names:
                 detection = loop_detector.push(action_name)
-                if detection.detected:
-                    logger.warning(f"[{persona.id}] LOOP DETECTED at step {step_number}: {detection.pattern}")
-                    if bus:
-                        await bus.emit(DashboardEvent(
-                            type=EventType.LOOP_DETECTED, persona_id=persona.id,
-                            batch_id=batch_id, stage="2/5",
-                            data={
-                                "message": f"Loop detected: {detection.pattern}",
-                                "pattern_type": detection.pattern_type,
-                                "pattern": detection.pattern,
-                                "step_number": step_number,
-                                "window": detection.window,
-                            },
-                        ))
+                if detection.detected and step_detection is None:
+                    step_detection = detection
 
-            # --- Phase tracking for TravliaqAgent ---
-            _update_phase_tracker(phase_tracker, persona, thinking, action_names)
+            if step_detection:
+                logger.warning(f"[{persona.id}] LOOP DETECTED at step {step_number}: {step_detection.pattern}")
+                if bus:
+                    await bus.emit(DashboardEvent(
+                        type=EventType.LOOP_DETECTED, persona_id=persona.id,
+                        batch_id=batch_id, stage="2/5",
+                        data={
+                            "message": f"Loop detected: {step_detection.pattern}",
+                            "pattern_type": step_detection.pattern_type,
+                            "pattern": step_detection.pattern,
+                            "step_number": step_number,
+                            "window": step_detection.window,
+                        },
+                    ))
+
+            # Phase tracking uses bare names (more sensitive to generic stuck patterns)
+            _update_phase_tracker(phase_tracker, persona, thinking, bare_names)
 
         agent, browser, fallback_used, phase_tracker = create_agent(persona, settings, yaml_config, step_callback=_on_step)
         logger.info(f"[{persona.id}]   Agent created OK (primary: {primary_model}, fallback: {fallback_used or 'none'})")
@@ -376,22 +385,14 @@ async def run_single_persona(
                     result.status = RunStatus.FAILED
                     result.error_message = f"All {len(model_chain)} models failed: {first_error[:200]}"
                     logger.error(f"[{persona.id}]   FAILED: all models exhausted")
-                    if bus:
-                        await bus.emit(DashboardEvent(
-                            type=EventType.PERSONA_FAILED, persona_id=persona.id,
-                            batch_id=batch_id, data={"error": result.error_message, "stage": "2/5"},
-                        ))
+                    # Don't emit PERSONA_FAILED here — the outer except handler does it
                     raise RuntimeError(result.error_message)
             else:
                 # Not a model error or no backups — mark as FAILED
                 result.status = RunStatus.FAILED
                 result.error_message = f"Agent returned 0 actions: {first_error[:300]}"
                 logger.error(f"[{persona.id}]   FAILED: 0 actions, error: {first_error[:200]}")
-                if bus:
-                    await bus.emit(DashboardEvent(
-                        type=EventType.PERSONA_FAILED, persona_id=persona.id,
-                        batch_id=batch_id, data={"error": result.error_message, "stage": "2/5"},
-                    ))
+                # Don't emit PERSONA_FAILED here — the outer except handler does it
                 raise RuntimeError(result.error_message)
 
         # --- Step 3: Extract results ---
@@ -615,6 +616,13 @@ async def run_batch(
                     skip.finished_at = datetime.now(timezone.utc)
                     skip.duration_seconds = 0.0
                     results.append(skip)
+                    if bus:
+                        await bus.emit(DashboardEvent(
+                            type=EventType.PERSONA_FAILED,
+                            persona_id=remaining_persona.id,
+                            batch_id=batch_id,
+                            data={"error": "Skipped — all LLM providers exhausted", "stage": "0/5"},
+                        ))
                 break
 
         # Cooldown between personas (skip after last one)
@@ -668,6 +676,21 @@ def _build_on_step_end(persona_id: str):
             logger.info(f"[{persona_id}] Backoff: {failures} consecutive failure(s) — waiting {delay}s")
             await asyncio.sleep(delay)
     return _on_step_end
+
+
+def _qualify_action_name(action_key: str, params) -> str:
+    """Build element-qualified action name for loop detection and dashboard.
+
+    Examples: click_element[5], input_text[3], scroll_down, go_to_url, done.
+    """
+    if not params or not isinstance(params, dict):
+        return action_key
+    index = params.get("index")
+    if index is not None:
+        return f"{action_key}[{index}]"
+    if action_key == "scroll":
+        return f"scroll_{'down' if params.get('down', True) else 'up'}"
+    return action_key
 
 
 def _update_phase_tracker(phase_tracker, persona, thinking: str | None, action_names: list[str]) -> None:
