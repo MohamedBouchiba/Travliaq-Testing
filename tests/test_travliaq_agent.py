@@ -202,7 +202,7 @@ class TestExcludedProvidersFallback:
     """Test that excluded_providers filters fallback selection in create_agent."""
 
     def _mock_settings(self):
-        """Create settings mock with all 4 providers configured."""
+        """Create settings mock with all 5 providers configured."""
         settings = MagicMock()
         settings.groq_api_key = "gsk_test"
         settings.groq_model = "meta-llama/llama-4-scout-17b-16e-instruct"
@@ -213,6 +213,8 @@ class TestExcludedProvidersFallback:
         settings.google_fallback_model = "gemini-2.5-flash"
         settings.sambanova_api_key = "sn_test"
         settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
+        settings.cerebras_api_key = "csk_test"
+        settings.cerebras_model = "llama-3.3-70b"
         settings.openrouter_backup_models_list = []
         settings.build_model_chain.return_value = [
             "meta-llama/llama-4-scout-17b-16e-instruct",
@@ -220,6 +222,7 @@ class TestExcludedProvidersFallback:
             "gemini-2.5-flash-lite",
             "gemini-2.5-flash",
             "Llama-4-Maverick-17B-128E-Instruct",
+            "llama-3.3-70b",
         ]
         return settings
 
@@ -274,7 +277,7 @@ class TestExcludedProvidersFallback:
         chain = settings.build_model_chain()
         primary = "gemini-2.5-flash-lite"
         primary_provider = _get_provider(primary)
-        excluded = {"groq", "openrouter", "sambanova"} | {primary_provider}
+        excluded = {"groq", "openrouter", "sambanova", "cerebras"} | {primary_provider}
         fallback = None
         for candidate in chain:
             if _get_provider(candidate, settings) not in excluded:
@@ -491,3 +494,202 @@ class TestStuckActionCount:
         for _ in range(3):
             pt.push_action("click")
         assert pt.is_stuck_in_loop
+
+
+class TestStepThrottling:
+    """Tests for per-step rate-limit throttling in _build_on_step_end."""
+
+    def test_throttle_sleeps_when_below_interval(self):
+        """Two rapid successful steps should trigger throttle sleep."""
+        callback = _build_on_step_end("test-persona", min_step_interval=2.5)
+        agent = MagicMock()
+        agent.state.consecutive_failures = 0
+
+        with patch("src.orchestrator.time.monotonic") as mock_time, \
+             patch("src.orchestrator.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            # First call: last_step_time=0.0, monotonic=1000.0, elapsed >> 2.5
+            mock_time.return_value = 1000.0
+            asyncio.get_event_loop().run_until_complete(callback(agent))
+            mock_sleep.assert_not_called()
+
+            # Second call: 0.5s later (under 2.5s interval)
+            mock_time.return_value = 1000.5
+            asyncio.get_event_loop().run_until_complete(callback(agent))
+            mock_sleep.assert_called_once_with(2.0)
+
+    def test_no_throttle_when_interval_exceeded(self):
+        """Step after >= min_interval should not sleep."""
+        callback = _build_on_step_end("test-persona", min_step_interval=2.5)
+        agent = MagicMock()
+        agent.state.consecutive_failures = 0
+
+        with patch("src.orchestrator.time.monotonic") as mock_time, \
+             patch("src.orchestrator.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            mock_time.return_value = 1000.0
+            asyncio.get_event_loop().run_until_complete(callback(agent))
+            mock_time.return_value = 1003.0  # 3.0s later > 2.5s
+            asyncio.get_event_loop().run_until_complete(callback(agent))
+            mock_sleep.assert_not_called()
+
+    def test_throttle_disabled_when_zero(self):
+        """min_step_interval=0 disables throttling entirely."""
+        callback = _build_on_step_end("test-persona", min_step_interval=0)
+        agent = MagicMock()
+        agent.state.consecutive_failures = 0
+
+        with patch("src.orchestrator.time.monotonic") as mock_time, \
+             patch("src.orchestrator.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            mock_time.return_value = 1000.0
+            asyncio.get_event_loop().run_until_complete(callback(agent))
+            mock_time.return_value = 1000.1
+            asyncio.get_event_loop().run_until_complete(callback(agent))
+            mock_sleep.assert_not_called()
+
+    def test_failure_backoff_takes_precedence(self):
+        """Failures should use exponential backoff, not throttle."""
+        callback = _build_on_step_end("test-persona", min_step_interval=2.5)
+        agent = MagicMock()
+        agent.state.consecutive_failures = 2
+
+        with patch("src.orchestrator.time.monotonic") as mock_time, \
+             patch("src.orchestrator.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            mock_time.return_value = 1000.0
+            asyncio.get_event_loop().run_until_complete(callback(agent))
+            mock_sleep.assert_called_once_with(20)  # backoff, not 2.5s throttle
+
+    def test_custom_interval(self):
+        """Custom min_step_interval value works."""
+        callback = _build_on_step_end("test-persona", min_step_interval=4.0)
+        agent = MagicMock()
+        agent.state.consecutive_failures = 0
+
+        with patch("src.orchestrator.time.monotonic") as mock_time, \
+             patch("src.orchestrator.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            mock_time.return_value = 1000.0
+            asyncio.get_event_loop().run_until_complete(callback(agent))
+            mock_time.return_value = 1001.0  # 1s later, under 4.0s
+            asyncio.get_event_loop().run_until_complete(callback(agent))
+            mock_sleep.assert_called_once_with(3.0)
+
+
+class TestCerebrasProvider:
+    """Tests for Cerebras provider identification and chain placement."""
+
+    def test_cerebras_model_detected(self):
+        settings = MagicMock()
+        settings.groq_model = "meta-llama/llama-4-scout-17b-16e-instruct"
+        settings.sambanova_api_key = ""
+        settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
+        settings.cerebras_api_key = "csk-test"
+        settings.cerebras_model = "llama-3.3-70b"
+        assert _get_provider("llama-3.3-70b", settings) == "cerebras"
+
+    def test_cerebras_without_key_falls_to_openrouter(self):
+        settings = MagicMock()
+        settings.groq_model = "meta-llama/llama-4-scout-17b-16e-instruct"
+        settings.sambanova_api_key = ""
+        settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
+        settings.cerebras_api_key = ""
+        settings.cerebras_model = "llama-3.3-70b"
+        assert _get_provider("llama-3.3-70b", settings) == "openrouter"
+
+    def test_cerebras_in_model_chain(self):
+        """Cerebras appears in chain when key is configured."""
+        from src.config import Settings
+        settings = Settings(
+            groq_api_key="gsk_test",
+            openrouter_api_key="sk-or-test",
+            google_api_key="AI_test",
+            sambanova_api_key="sn_test",
+            cerebras_api_key="csk_test",
+        )
+        chain = settings.build_model_chain()
+        assert settings.cerebras_model in chain
+
+    def test_cerebras_not_in_chain_without_key(self):
+        """Cerebras absent from chain when key is empty."""
+        from src.config import Settings
+        settings = Settings(
+            groq_api_key="gsk_test",
+            openrouter_api_key="sk-or-test",
+            cerebras_api_key="",
+        )
+        chain = settings.build_model_chain()
+        assert "llama-3.3-70b" not in chain
+
+    def test_excluded_4_providers_picks_cerebras(self):
+        """With groq+openrouter+sambanova excluded, Google primary picks Cerebras."""
+        settings = MagicMock()
+        settings.groq_model = "meta-llama/llama-4-scout-17b-16e-instruct"
+        settings.sambanova_api_key = "sn_test"
+        settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
+        settings.cerebras_api_key = "csk_test"
+        settings.cerebras_model = "llama-3.3-70b"
+        chain = [
+            "meta-llama/llama-4-scout-17b-16e-instruct",
+            "nvidia/nemotron-nano-12b-v2-vl:free",
+            "gemini-2.5-flash-lite",
+            "gemini-2.5-flash",
+            "Llama-4-Maverick-17B-128E-Instruct",
+            "llama-3.3-70b",
+        ]
+        excluded = {"groq", "openrouter", "sambanova", "google"}
+        fallback = None
+        for candidate in chain:
+            if _get_provider(candidate, settings) not in excluded:
+                fallback = candidate
+                break
+        assert fallback == "llama-3.3-70b"
+        assert _get_provider(fallback, settings) == "cerebras"
+
+
+class TestProviderRotation:
+    """Tests for per-persona provider rotation in run_batch."""
+
+    def test_unique_provider_deduplicates(self):
+        """Only one model per provider in the rotation pool."""
+        settings = MagicMock()
+        settings.groq_model = "meta-llama/llama-4-scout-17b-16e-instruct"
+        settings.sambanova_api_key = "sn_test"
+        settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
+        settings.cerebras_api_key = "csk_test"
+        settings.cerebras_model = "llama-3.3-70b"
+
+        chain = [
+            "meta-llama/llama-4-scout-17b-16e-instruct",  # groq
+            "nvidia/nemotron-nano-12b-v2-vl:free",         # openrouter
+            "gemini-2.5-flash-lite",                       # google
+            "gemini-2.5-flash",                            # google (dup)
+            "Llama-4-Maverick-17B-128E-Instruct",         # sambanova
+            "llama-3.3-70b",                               # cerebras
+            "google/gemma-3-12b-it:free",                  # openrouter (dup)
+        ]
+
+        unique = []
+        seen = set()
+        for m in chain:
+            prov = _get_provider(m, settings)
+            if prov not in seen:
+                seen.add(prov)
+                unique.append(m)
+
+        assert len(unique) == 5
+        providers = [_get_provider(m, settings) for m in unique]
+        assert providers == ["groq", "openrouter", "google", "sambanova", "cerebras"]
+
+    def test_distributes_8_personas(self):
+        """8 personas with 5 providers cycles correctly."""
+        pool = ["groq_m", "or_m", "google_m", "sn_m", "cerebras_m"]
+        assignments = [pool[i % len(pool)] for i in range(8)]
+        assert assignments == [
+            "groq_m", "or_m", "google_m", "sn_m", "cerebras_m",
+            "groq_m", "or_m", "google_m",
+        ]
+        from collections import Counter
+        assert max(Counter(assignments).values()) == 2
+
+    def test_single_provider(self):
+        """With only one provider, all personas use it."""
+        pool = ["groq_m"]
+        assignments = [pool[i % len(pool)] for i in range(4)]
+        assert all(a == "groq_m" for a in assignments)

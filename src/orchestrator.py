@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -92,13 +93,14 @@ async def run_single_persona(
     yaml_config: dict,
     batch_id: Optional[str] = None,
     skip_health_check: bool = False,
+    primary_model_override: Optional[str] = None,
 ) -> TestRunResult:
     """Execute a full test run for a single persona."""
     run_id = uuid.uuid4().hex[:8]
     started_at = datetime.now(timezone.utc)
 
     model_chain = settings.build_model_chain()
-    primary_model = model_chain[0] if model_chain else "N/A"
+    primary_model = primary_model_override or (model_chain[0] if model_chain else "N/A")
 
     _log_banner(persona.id, f"STARTING RUN — {persona.name} ({persona.language})")
     logger.info(f"[{persona.id}] Run ID: {persona.id}-{run_id}")
@@ -174,6 +176,9 @@ async def run_single_persona(
         timeout = yaml_config.get("orchestration", {}).get(
             "timeout_per_persona_seconds", 600
         )
+        min_step_interval = yaml_config.get("orchestration", {}).get(
+            "min_step_interval_seconds", 2.5
+        )
 
         # Loop detector + step callback
         loop_detector = LoopDetector()
@@ -238,7 +243,7 @@ async def run_single_persona(
             # Phase tracking uses bare names (more sensitive to generic stuck patterns)
             _update_phase_tracker(phase_tracker, persona, thinking, bare_names)
 
-        agent, browser, fallback_used, phase_tracker = create_agent(persona, settings, yaml_config, step_callback=_on_step)
+        agent, browser, fallback_used, phase_tracker = create_agent(persona, settings, yaml_config, step_callback=_on_step, model_override=primary_model_override)
         logger.info(f"[{persona.id}]   Agent created OK (primary: {primary_model}, fallback: {fallback_used or 'none'})")
 
         # --- Step 2: Run agent ---
@@ -258,7 +263,7 @@ async def run_single_persona(
         logger.info(f"[{persona.id}]   Waiting for agent to navigate, chat, and interact with widgets...")
 
         history = await asyncio.wait_for(
-            agent.run(max_steps=max_steps, on_step_end=_build_on_step_end(persona.id)),
+            agent.run(max_steps=max_steps, on_step_end=_build_on_step_end(persona.id, min_step_interval=min_step_interval)),
             timeout=timeout,
         )
 
@@ -360,7 +365,7 @@ async def run_single_persona(
                     logger.info(f"[{persona.id}]   Backup agent created OK ({backup_model})")
 
                     history = await asyncio.wait_for(
-                        agent.run(max_steps=max_steps, on_step_end=_build_on_step_end(persona.id)),
+                        agent.run(max_steps=max_steps, on_step_end=_build_on_step_end(persona.id, min_step_interval=min_step_interval)),
                         timeout=timeout,
                     )
 
@@ -579,17 +584,33 @@ async def run_batch(
         "cooldown_between_personas_seconds", 30
     )
 
+    # Build unique-provider chain for rotation (one model per provider)
+    model_chain = settings.build_model_chain()
+    unique_provider_models: list[str] = []
+    seen_providers: set[str] = set()
+    for m in model_chain:
+        prov = _get_provider(m, settings)
+        if prov not in seen_providers:
+            seen_providers.add(prov)
+            unique_provider_models.append(m)
+    logger.info(f"Provider rotation pool ({len(unique_provider_models)}): "
+                f"{[f'{m} ({_get_provider(m, settings)})' for m in unique_provider_models]}")
+
     # Count configured providers for batch abort threshold
     num_providers = sum(1 for k in [
         settings.groq_api_key, settings.openrouter_api_key,
         settings.google_api_key, getattr(settings, "sambanova_api_key", ""),
+        getattr(settings, "cerebras_api_key", ""),
     ] if k)
 
     for i, persona in enumerate(personas, 1):
-        logger.info(f"\n--- Batch progress: {i}/{len(personas)} ---")
+        # Rotate primary model across personas to spread RPD load
+        rotation_model = unique_provider_models[(i - 1) % len(unique_provider_models)] if unique_provider_models else None
+        logger.info(f"\n--- Batch progress: {i}/{len(personas)} (primary: {rotation_model or 'default'}) ---")
         result = await run_single_persona(
             persona, settings, yaml_config, batch_id,
             skip_health_check=(i > 1),  # only check connectivity for first persona
+            primary_model_override=rotation_model,
         )
         results.append(result)
         logger.info(f"--- {persona.id}: {result.status.value} (score: {result.score_overall or 'N/A'}) ---\n")
@@ -661,20 +682,28 @@ async def run_batch(
     return results
 
 
-def _build_on_step_end(persona_id: str):
-    """Create an on_step_end callback with exponential backoff on failures.
+def _build_on_step_end(persona_id: str, min_step_interval: float = 2.5):
+    """Create an on_step_end callback with exponential backoff on failures
+    AND minimum interval throttling on successes.
 
-    browser-use has zero internal sleep between consecutive failures. This
-    hook fires after each step (including failed ones) and injects a delay
-    proportional to the number of consecutive failures, giving rate-limited
-    APIs time to recover before the next attempt.
+    - Failures: exponential backoff (10s, 20s, 40s, cap 60s)
+    - Successes: enforce minimum interval between steps to stay under RPM limits
     """
+    last_step_time = [0.0]  # mutable ref for closure
+
     async def _on_step_end(agent):
         failures = agent.state.consecutive_failures
         if failures > 0:
             delay = min(10 * (2 ** (failures - 1)), 60)  # 10s, 20s, 40s, cap 60s
             logger.info(f"[{persona_id}] Backoff: {failures} consecutive failure(s) — waiting {delay}s")
             await asyncio.sleep(delay)
+        elif min_step_interval > 0:
+            now = time.monotonic()
+            elapsed = now - last_step_time[0]
+            if elapsed < min_step_interval:
+                await asyncio.sleep(min_step_interval - elapsed)
+        last_step_time[0] = time.monotonic()
+
     return _on_step_end
 
 

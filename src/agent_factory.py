@@ -24,6 +24,9 @@ def _get_provider(model_id: str, settings: Settings | None = None) -> str:
     # Exact match for SambaNova
     if settings and settings.sambanova_api_key and model_id == settings.sambanova_model:
         return "sambanova"
+    # Exact match for Cerebras
+    if settings and settings.cerebras_api_key and model_id == settings.cerebras_model:
+        return "cerebras"
     if not settings and model_id.startswith(("meta-llama/", "openai/gpt-oss")):
         return "groq"  # legacy fallback without settings context
     return "openrouter"
@@ -85,6 +88,16 @@ def create_llm_for_model(model_id: str, settings: Settings):
             base_url="https://api.sambanova.ai/v1",
             max_retries=1,
             max_completion_tokens=2048,  # 16K context — prompts are ~13K, leave room
+        )
+
+    # Cerebras (llama-3.3-70b — free, fast, OpenAI-compatible)
+    if settings.cerebras_api_key and model_id == settings.cerebras_model:
+        logger.debug(f"Creating ChatOpenAI (Cerebras) for {model_id}")
+        return ChatOpenAI(
+            model=model_id,
+            api_key=settings.cerebras_api_key,
+            base_url="https://api.cerebras.ai/v1",
+            max_retries=1,
         )
 
     # OpenRouter fallback

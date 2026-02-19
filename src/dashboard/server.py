@@ -138,8 +138,11 @@ async def _state_updater() -> None:
             _batch_state["current_persona"] = pid
             _batch_state["current_stage"] = event.stage
             if pid in _batch_state["personas"]:
-                _batch_state["personas"][pid]["status"] = "running"
-                _batch_state["personas"][pid]["stage"] = event.stage
+                p = _batch_state["personas"][pid]
+                # Don't override terminal statuses (failed/timeout/completed)
+                if p.get("status") not in ("failed", "timeout", "completed"):
+                    p["status"] = "running"
+                p["stage"] = event.stage
 
         elif etype == "persona_completed":
             if pid in _batch_state["personas"]:

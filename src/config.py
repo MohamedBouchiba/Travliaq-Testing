@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     sambanova_api_key: str = ""
     sambanova_model: str = "Llama-4-Maverick-17B-128E-Instruct"
 
+    # Cerebras (free, fast inference, OpenAI-compatible)
+    cerebras_api_key: str = ""
+    cerebras_model: str = "llama-3.3-70b"
+
     openrouter_backup_models: str = (
         "google/gemma-3-12b-it:free,"
         "google/gemma-3-27b-it:free,"
@@ -69,6 +73,8 @@ class Settings(BaseSettings):
             chain.append(self.google_fallback_model)
         if self.sambanova_api_key:
             chain.append(self.sambanova_model)
+        if self.cerebras_api_key:
+            chain.append(self.cerebras_model)
         if self.openrouter_api_key:
             chain.extend(self.openrouter_backup_models_list)
         return chain

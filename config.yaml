@@ -25,6 +25,7 @@ orchestration:
   timeout_per_persona_seconds: 1200
   cooldown_between_personas_seconds: 30
   rate_limit_cooldown_seconds: 5  # reduced from 60 — exponential backoff already waited
+  min_step_interval_seconds: 2.5  # max ~24 steps/min, under free-tier RPM limits
 
 dashboard:
   port: 8099
