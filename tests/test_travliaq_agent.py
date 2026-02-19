@@ -202,12 +202,13 @@ class TestExcludedProvidersFallback:
     """Test that excluded_providers filters fallback selection in create_agent."""
 
     def _mock_settings(self):
-        """Create settings mock with all 5 providers configured."""
+        """Create settings mock with all 6 providers configured."""
         settings = MagicMock()
         settings.groq_api_key = "gsk_test"
         settings.groq_model = "meta-llama/llama-4-scout-17b-16e-instruct"
         settings.openrouter_api_key = "sk-or-test"
         settings.openrouter_model = "nvidia/nemotron-nano-12b-v2-vl:free"
+        settings.openrouter_paid_model = "bytedance-seed/seed-1.6-flash"
         settings.google_api_key = "AI_test"
         settings.google_model = "gemini-2.5-flash-lite"
         settings.google_fallback_model = "gemini-2.5-flash"
@@ -219,6 +220,7 @@ class TestExcludedProvidersFallback:
         settings.build_model_chain.return_value = [
             "meta-llama/llama-4-scout-17b-16e-instruct",
             "nvidia/nemotron-nano-12b-v2-vl:free",
+            "bytedance-seed/seed-1.6-flash",
             "gemini-2.5-flash-lite",
             "gemini-2.5-flash",
             "Llama-4-Maverick-17B-128E-Instruct",
@@ -256,8 +258,8 @@ class TestExcludedProvidersFallback:
         assert fallback == "nvidia/nemotron-nano-12b-v2-vl:free"
         assert _get_provider(fallback, settings) == "openrouter"
 
-    def test_excluded_groq_openrouter_picks_sambanova(self):
-        """With groq+openrouter excluded, Google primary picks SambaNova."""
+    def test_excluded_groq_openrouter_picks_openrouter_paid(self):
+        """With groq+openrouter excluded, Google primary picks openrouter_paid."""
         settings = self._mock_settings()
         chain = settings.build_model_chain()
         primary = "gemini-2.5-flash-lite"
@@ -268,8 +270,8 @@ class TestExcludedProvidersFallback:
             if _get_provider(candidate, settings) not in excluded:
                 fallback = candidate
                 break
-        assert fallback == "Llama-4-Maverick-17B-128E-Instruct"
-        assert _get_provider(fallback, settings) == "sambanova"
+        assert fallback == "bytedance-seed/seed-1.6-flash"
+        assert _get_provider(fallback, settings) == "openrouter_paid"
 
     def test_all_excluded_no_fallback(self):
         """With all providers excluded, no fallback is selected."""
@@ -277,7 +279,7 @@ class TestExcludedProvidersFallback:
         chain = settings.build_model_chain()
         primary = "gemini-2.5-flash-lite"
         primary_provider = _get_provider(primary)
-        excluded = {"groq", "openrouter", "sambanova", "cerebras"} | {primary_provider}
+        excluded = {"groq", "openrouter", "openrouter_paid", "sambanova", "cerebras"} | {primary_provider}
         fallback = None
         for candidate in chain:
             if _get_provider(candidate, settings) not in excluded:
@@ -654,10 +656,12 @@ class TestProviderRotation:
         settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
         settings.cerebras_api_key = "csk_test"
         settings.cerebras_model = "llama-3.3-70b"
+        settings.openrouter_paid_model = "bytedance-seed/seed-1.6-flash"
 
         chain = [
             "meta-llama/llama-4-scout-17b-16e-instruct",  # groq
             "nvidia/nemotron-nano-12b-v2-vl:free",         # openrouter
+            "bytedance-seed/seed-1.6-flash",               # openrouter_paid
             "gemini-2.5-flash-lite",                       # google
             "gemini-2.5-flash",                            # google (dup)
             "Llama-4-Maverick-17B-128E-Instruct",         # sambanova
@@ -673,9 +677,9 @@ class TestProviderRotation:
                 seen.add(prov)
                 unique.append(m)
 
-        assert len(unique) == 5
+        assert len(unique) == 6
         providers = [_get_provider(m, settings) for m in unique]
-        assert providers == ["groq", "openrouter", "google", "sambanova", "cerebras"]
+        assert providers == ["groq", "openrouter", "openrouter_paid", "google", "sambanova", "cerebras"]
 
     def test_distributes_8_personas(self):
         """8 personas with 5 providers cycles correctly."""
@@ -693,3 +697,49 @@ class TestProviderRotation:
         pool = ["groq_m"]
         assignments = [pool[i % len(pool)] for i in range(4)]
         assert all(a == "groq_m" for a in assignments)
+
+
+class TestOpenRouterPaidProvider:
+    """Tests for paid OpenRouter model as independent provider."""
+
+    def test_openrouter_paid_detected(self):
+        """Paid model maps to 'openrouter_paid', not 'openrouter'."""
+        settings = MagicMock()
+        settings.groq_model = "meta-llama/llama-4-scout-17b-16e-instruct"
+        settings.sambanova_api_key = ""
+        settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
+        settings.cerebras_api_key = ""
+        settings.cerebras_model = "llama-3.3-70b"
+        settings.openrouter_paid_model = "bytedance-seed/seed-1.6-flash"
+        assert _get_provider("bytedance-seed/seed-1.6-flash", settings) == "openrouter_paid"
+
+    def test_openrouter_paid_without_model_falls_to_openrouter(self):
+        """Empty openrouter_paid_model → model routes to 'openrouter'."""
+        settings = MagicMock()
+        settings.groq_model = "meta-llama/llama-4-scout-17b-16e-instruct"
+        settings.sambanova_api_key = ""
+        settings.sambanova_model = "Llama-4-Maverick-17B-128E-Instruct"
+        settings.cerebras_api_key = ""
+        settings.cerebras_model = "llama-3.3-70b"
+        settings.openrouter_paid_model = ""
+        assert _get_provider("bytedance-seed/seed-1.6-flash", settings) == "openrouter"
+
+    def test_openrouter_paid_in_chain(self):
+        """Paid model appears in chain when configured."""
+        from src.config import Settings
+        settings = Settings(
+            openrouter_api_key="sk-or-test",
+            openrouter_paid_model="bytedance-seed/seed-1.6-flash",
+        )
+        chain = settings.build_model_chain()
+        assert "bytedance-seed/seed-1.6-flash" in chain
+
+    def test_openrouter_paid_absent_without_model(self):
+        """Paid model absent from chain when field is empty."""
+        from src.config import Settings
+        settings = Settings(
+            openrouter_api_key="sk-or-test",
+            openrouter_paid_model="",
+        )
+        chain = settings.build_model_chain()
+        assert "bytedance-seed/seed-1.6-flash" not in chain

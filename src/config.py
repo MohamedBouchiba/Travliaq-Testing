@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     # OpenRouter (SECONDARY — fallback, vision-capable primary)
     openrouter_api_key: str = ""
     openrouter_model: str = "nvidia/nemotron-nano-12b-v2-vl:free"  # vision-language model
+    openrouter_paid_model: str = ""  # cheap paid model for higher rate limits
 
     # Google Gemini (TERTIARY — free tier has low daily quota)
     google_api_key: str = ""
@@ -68,6 +69,8 @@ class Settings(BaseSettings):
             chain.append(self.groq_model)
         if self.openrouter_api_key and self.openrouter_model:
             chain.append(self.openrouter_model)
+        if self.openrouter_api_key and self.openrouter_paid_model:
+            chain.append(self.openrouter_paid_model)
         if self.google_api_key:
             chain.append(self.google_model)
             chain.append(self.google_fallback_model)

@@ -27,6 +27,9 @@ def _get_provider(model_id: str, settings: Settings | None = None) -> str:
     # Exact match for Cerebras
     if settings and settings.cerebras_api_key and model_id == settings.cerebras_model:
         return "cerebras"
+    # Exact match for paid OpenRouter model (separate rate-limit pool)
+    if settings and getattr(settings, "openrouter_paid_model", "") and model_id == settings.openrouter_paid_model:
+        return "openrouter_paid"
     if not settings and model_id.startswith(("meta-llama/", "openai/gpt-oss")):
         return "groq"  # legacy fallback without settings context
     return "openrouter"

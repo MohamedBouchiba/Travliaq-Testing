@@ -601,6 +601,7 @@ async def run_batch(
         settings.groq_api_key, settings.openrouter_api_key,
         settings.google_api_key, getattr(settings, "sambanova_api_key", ""),
         getattr(settings, "cerebras_api_key", ""),
+        getattr(settings, "openrouter_paid_model", ""),
     ] if k)
 
     for i, persona in enumerate(personas, 1):
