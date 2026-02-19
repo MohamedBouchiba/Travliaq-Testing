@@ -4,10 +4,10 @@ import asyncio
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from ..events import DashboardEvent, get_event_bus
@@ -35,6 +35,12 @@ _batch_state: Dict[str, Any] = {
     "events_log": [],  # last 200 events
 }
 
+# ---------------------------------------------------------------------------
+# Debug log — concise human-readable lines for copy-paste debugging
+# ---------------------------------------------------------------------------
+_debug_log: List[str] = []
+_DEBUG_LOG_MAX = 500
+
 
 def _reset_state() -> None:
     _batch_state.update({
@@ -46,13 +52,21 @@ def _reset_state() -> None:
         "started_at": None,
         "events_log": [],
     })
+    _debug_log.clear()
+
+
+def _dbg(line: str) -> None:
+    """Append a line to the debug log (ring buffer)."""
+    _debug_log.append(line)
+    if len(_debug_log) > _DEBUG_LOG_MAX:
+        del _debug_log[:len(_debug_log) - _DEBUG_LOG_MAX]
 
 
 # ---------------------------------------------------------------------------
 # Background task: listen to events and update _batch_state
 # ---------------------------------------------------------------------------
 async def _state_updater() -> None:
-    """Subscribe to EventBus and keep _batch_state in sync."""
+    """Subscribe to EventBus and keep _batch_state + _debug_log in sync."""
     bus = get_event_bus()
     while not bus:
         await asyncio.sleep(1.0)
@@ -66,47 +80,106 @@ async def _state_updater() -> None:
             _batch_state["events_log"] = _batch_state["events_log"][-200:]
 
         etype = event.type.value
+        ts = event.timestamp.strftime("%H:%M:%S")
+        pid = event.persona_id or ""
 
         if etype == "batch_started":
             _batch_state["batch_id"] = event.batch_id
             _batch_state["status"] = "running"
             _batch_state["started_at"] = event.timestamp.isoformat()
-            for pid in event.data.get("persona_ids", []):
-                _batch_state["personas"][pid] = {"status": "pending", "stage": None}
+            for p_id in event.data.get("persona_ids", []):
+                _batch_state["personas"][p_id] = {"status": "pending", "stage": None}
+            ids = event.data.get("persona_ids", [])
+            chain = event.data.get("model_chain", [])
+            _dbg(f"[{ts}] BATCH {event.batch_id} | {len(ids)} personas: {', '.join(ids)}")
+            if chain:
+                _dbg(f"[{ts}]   model chain: {' → '.join(chain)}")
 
-        elif etype.startswith("stage_"):
-            _batch_state["current_persona"] = event.persona_id
+        elif etype == "stage_health_check":
+            _batch_state["current_persona"] = pid
             _batch_state["current_stage"] = event.stage
-            if event.persona_id and event.persona_id in _batch_state["personas"]:
-                _batch_state["personas"][event.persona_id]["status"] = "running"
-                _batch_state["personas"][event.persona_id]["stage"] = event.stage
+            if pid in _batch_state["personas"]:
+                _batch_state["personas"][pid]["status"] = "running"
+                _batch_state["personas"][pid]["stage"] = event.stage
+            msg = event.data.get("message", "")
+            _dbg(f"[{ts}] [{pid}] health check: {msg}")
+
+        elif etype == "stage_create_agent":
+            _batch_state["current_persona"] = pid
+            _batch_state["current_stage"] = event.stage
+            if pid in _batch_state["personas"]:
+                _batch_state["personas"][pid]["status"] = "running"
+                _batch_state["personas"][pid]["stage"] = event.stage
+            primary = event.data.get("primary_model", "?")
+            chain = event.data.get("model_chain", [])
+            chain_str = f" | chain: {' → '.join(chain)}" if chain else ""
+            _dbg(f"[{ts}] [{pid}] creating agent | primary={primary}{chain_str}")
+
+        elif etype == "stage_run_agent":
+            _batch_state["current_persona"] = pid
+            _batch_state["current_stage"] = event.stage
+            if pid in _batch_state["personas"]:
+                _batch_state["personas"][pid]["status"] = "running"
+                _batch_state["personas"][pid]["stage"] = event.stage
+            msg = event.data.get("message", "")
+            if event.data.get("fallback"):
+                _dbg(f"[{ts}] [{pid}] FALLBACK: {msg}")
+            elif "Rate limited" in msg or "waiting" in msg:
+                _dbg(f"[{ts}] [{pid}] {msg}")
+            elif msg == "Running agent":
+                primary = event.data.get("primary_model", "?")
+                fallback = event.data.get("fallback_model")
+                fb_str = f" | fallback={fallback}" if fallback else ""
+                _dbg(f"[{ts}] [{pid}] running agent | model={primary}{fb_str}")
+
+        elif etype.startswith("stage_") and etype not in (
+            "stage_health_check", "stage_create_agent", "stage_run_agent",
+        ):
+            _batch_state["current_persona"] = pid
+            _batch_state["current_stage"] = event.stage
+            if pid in _batch_state["personas"]:
+                _batch_state["personas"][pid]["status"] = "running"
+                _batch_state["personas"][pid]["stage"] = event.stage
 
         elif etype == "persona_completed":
-            if event.persona_id and event.persona_id in _batch_state["personas"]:
+            if pid in _batch_state["personas"]:
                 d = event.data
                 score = d.get("evaluation", {}).get("overall_score")
                 status = d.get("status", "completed")
-                _batch_state["personas"][event.persona_id].update({
+                _batch_state["personas"][pid].update({
                     "status": status,
                     "stage": "5/5",
                     "score": score,
                     "phase_furthest": d.get("execution", {}).get("phase_furthest"),
                     "duration": d.get("timing", {}).get("duration_seconds"),
-                    "result_data": d,  # Full result for late joiners
+                    "result_data": d,
                 })
+                dur = d.get("timing", {}).get("duration_seconds")
+                steps = d.get("execution", {}).get("total_steps", "?")
+                msgs = d.get("execution", {}).get("total_messages", "?")
+                phase = d.get("execution", {}).get("phase_furthest", "?")
+                model = d.get("meta", {}).get("llm_model_used", "?")
+                strengths = d.get("evaluation", {}).get("strengths", [])
+                frustr = d.get("evaluation", {}).get("frustration_points", [])
+                _dbg(f"[{ts}] [{pid}] DONE: {status} | {steps} steps | {msgs} msgs | phase={phase} | score={score} | {dur:.0f}s | model={model}")
+                if strengths:
+                    _dbg(f"[{ts}] [{pid}]   strengths: {'; '.join(str(s) for s in strengths[:3])}")
+                if frustr:
+                    _dbg(f"[{ts}] [{pid}]   frustrations: {'; '.join(str(f) for f in frustr[:3])}")
 
         elif etype == "persona_failed":
-            if event.persona_id and event.persona_id in _batch_state["personas"]:
-                p = _batch_state["personas"][event.persona_id]
+            if pid in _batch_state["personas"]:
+                p = _batch_state["personas"][pid]
+                err = event.data.get("error", "")
                 p.update({
                     "status": "failed",
                     "stage": event.data.get("stage"),
-                    "error": event.data.get("error"),
+                    "error": err,
                 })
                 if not p.get("result_data"):
                     p["result_data"] = {
                         "status": "failed",
-                        "error_message": event.data.get("error"),
+                        "error_message": err,
                         "execution": {
                             "phases_reached": [], "phase_furthest": None,
                             "total_steps": p.get("current_step"),
@@ -116,18 +189,20 @@ async def _state_updater() -> None:
                         "timing": {"duration_seconds": None},
                         "logs": {}, "meta": {},
                     }
+                _dbg(f"[{ts}] [{pid}] FAILED: {err[:150]}")
 
         elif etype == "persona_timeout":
-            if event.persona_id and event.persona_id in _batch_state["personas"]:
-                p = _batch_state["personas"][event.persona_id]
+            if pid in _batch_state["personas"]:
+                p = _batch_state["personas"][pid]
+                err = event.data.get("error", "")
                 p.update({
                     "status": "timeout",
-                    "error": event.data.get("error"),
+                    "error": err,
                 })
                 if not p.get("result_data"):
                     p["result_data"] = {
                         "status": "timeout",
-                        "error_message": event.data.get("error"),
+                        "error_message": err,
                         "execution": {
                             "phases_reached": [], "phase_furthest": None,
                             "total_steps": p.get("current_step"),
@@ -137,18 +212,20 @@ async def _state_updater() -> None:
                         "timing": {"duration_seconds": None},
                         "logs": {}, "meta": {},
                     }
+                _dbg(f"[{ts}] [{pid}] TIMEOUT: {err[:100]}")
 
         elif etype == "agent_step":
-            if event.persona_id and event.persona_id in _batch_state["personas"]:
-                p = _batch_state["personas"][event.persona_id]
-                p["current_step"] = event.data.get("step_number")
+            if pid in _batch_state["personas"]:
+                p = _batch_state["personas"][pid]
+                step_num = event.data.get("step_number", 0)
+                p["current_step"] = step_num
                 p["max_steps"] = event.data.get("max_steps")
                 p["current_url"] = event.data.get("url")
                 p["current_thinking"] = event.data.get("thinking")
                 if "step_history" not in p:
                     p["step_history"] = []
                 p["step_history"].append({
-                    "step": event.data.get("step_number"),
+                    "step": step_num,
                     "actions": event.data.get("actions"),
                     "url": event.data.get("url"),
                     "thinking": event.data.get("thinking"),
@@ -156,9 +233,19 @@ async def _state_updater() -> None:
                 if len(p["step_history"]) > 20:
                     p["step_history"] = p["step_history"][-20:]
 
+                # Debug log: every 5th step, first 3 steps, or steps with thinking
+                actions = event.data.get("actions", [])
+                actions_str = ",".join(actions) if actions else "none"
+                thinking = event.data.get("thinking", "")
+                if step_num <= 3 or step_num % 5 == 0:
+                    line = f"[{ts}] [{pid}] step {step_num}: {actions_str}"
+                    if thinking:
+                        line += f" | {thinking[:80]}"
+                    _dbg(line)
+
         elif etype == "loop_detected":
-            if event.persona_id and event.persona_id in _batch_state["personas"]:
-                p = _batch_state["personas"][event.persona_id]
+            if pid in _batch_state["personas"]:
+                p = _batch_state["personas"][pid]
                 if "loops" not in p:
                     p["loops"] = []
                 p["loops"].append({
@@ -166,11 +253,20 @@ async def _state_updater() -> None:
                     "pattern": event.data.get("pattern"),
                     "step_number": event.data.get("step_number"),
                 })
+                _dbg(f"[{ts}] [{pid}] LOOP: {event.data.get('pattern')} at step {event.data.get('step_number')}")
 
         elif etype == "batch_completed":
             _batch_state["status"] = "completed"
             _batch_state["current_persona"] = None
             _batch_state["current_stage"] = None
+            # Build summary
+            summary_parts = []
+            for p_id, p_data in _batch_state["personas"].items():
+                s = p_data.get("status", "?")
+                sc = p_data.get("score")
+                sc_str = f"{sc}" if sc else "N/A"
+                summary_parts.append(f"{p_id}={s}({sc_str})")
+            _dbg(f"[{ts}] BATCH DONE | {' | '.join(summary_parts)}")
 
 
 @app.on_event("startup")
@@ -269,6 +365,24 @@ async def get_result(filename: str) -> JSONResponse:
         return JSONResponse({"error": "not found"}, status_code=404)
     data = json.loads(file_path.read_text(encoding="utf-8"))
     return JSONResponse(data)
+
+
+@app.get("/api/debug-log")
+async def debug_log() -> PlainTextResponse:
+    """Concise human-readable log for debugging. Updates during execution.
+
+    Copy-paste this output to share with a developer for troubleshooting.
+    Shows: batch progress, provider switches, errors, phase/score per persona.
+    """
+    if not _debug_log:
+        return PlainTextResponse(
+            "No logs yet. Start a batch run with --run-batch.\n",
+            media_type="text/plain; charset=utf-8",
+        )
+    return PlainTextResponse(
+        "\n".join(_debug_log) + "\n",
+        media_type="text/plain; charset=utf-8",
+    )
 
 
 @app.get("/api/personas")

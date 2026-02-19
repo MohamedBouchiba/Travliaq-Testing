@@ -161,7 +161,11 @@ async def run_single_persona(
             await bus.emit(DashboardEvent(
                 type=EventType.STAGE_CREATE_AGENT, persona_id=persona.id,
                 batch_id=batch_id, stage="1/5",
-                data={"message": "Creating browser-use agent"},
+                data={
+                    "message": "Creating browser-use agent",
+                    "primary_model": primary_model,
+                    "model_chain": model_chain[:5],
+                },
             ))
         logger.info(f"[{persona.id}]   Browser headless: {yaml_config.get('browser', {}).get('headless', False)}")
         logger.info(f"[{persona.id}]   Window: {yaml_config.get('browser', {}).get('window_width', 1440)}x{yaml_config.get('browser', {}).get('window_height', 900)}")
@@ -234,7 +238,12 @@ async def run_single_persona(
             await bus.emit(DashboardEvent(
                 type=EventType.STAGE_RUN_AGENT, persona_id=persona.id,
                 batch_id=batch_id, stage="2/5",
-                data={"max_steps": max_steps, "timeout": timeout, "message": "Running agent"},
+                data={
+                    "max_steps": max_steps, "timeout": timeout,
+                    "message": "Running agent",
+                    "primary_model": primary_model,
+                    "fallback_model": fallback_used,
+                },
             ))
         logger.info(f"[{persona.id}]   Target URL: {yaml_config.get('target', {}).get('planner_url_clean', 'N/A')}")
         logger.info(f"[{persona.id}]   Waiting for agent to navigate, chat, and interact with widgets...")
@@ -561,6 +570,7 @@ async def run_batch(
             data={
                 "persona_ids": [p.id for p in personas],
                 "total": len(personas),
+                "model_chain": settings.build_model_chain()[:5],
             },
         ))
 
