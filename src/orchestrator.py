@@ -28,6 +28,11 @@ from .screenshot_manager import save_screenshots
 logger = logging.getLogger(__name__)
 
 
+class ZeroActionAbortError(Exception):
+    """Raised when the model produces no valid actions for N consecutive steps."""
+    pass
+
+
 def _log_banner(persona_id: str, message: str) -> None:
     """Print a visible banner in logs."""
     logger.info("=" * 60)
@@ -45,8 +50,21 @@ def _log_banner(persona_id: str, message: str) -> None:
 def _check_llm_health(settings: Settings) -> bool:
     """Lightweight LLM connectivity check with retry.
 
-    Checks the primary provider first (Groq > OpenRouter > Google).
+    Checks the primary provider first (SambaNova > Groq > OpenRouter > Google).
     """
+    if settings.sambanova_api_key:
+        from openai import OpenAI
+        client = OpenAI(
+            api_key=settings.sambanova_api_key,
+            base_url="https://api.sambanova.ai/v1",
+        )
+        client.chat.completions.create(
+            model=settings.sambanova_model,
+            messages=[{"role": "user", "content": "ping"}],
+            max_tokens=5,
+        )
+        return True
+
     if settings.groq_api_key:
         from groq import Groq
         client = Groq(api_key=settings.groq_api_key)
@@ -218,6 +236,25 @@ async def run_single_persona(
                     },
                 ))
 
+            # Zero-action tracking: detect models that produce thoughts but no actions
+            no_action_limit = yaml_config.get("agent", {}).get("no_action_limit", 5)
+            if not action_names:
+                phase_tracker._consecutive_no_action += 1
+                # Push synthetic "no_action" so PhaseTracker loop detection fires
+                phase_tracker.push_action("no_action")
+                loop_detector.push("no_action")
+                if phase_tracker._consecutive_no_action >= 3:
+                    logger.warning(
+                        f"[{persona.id}] {phase_tracker._consecutive_no_action} consecutive "
+                        f"steps with zero actions at step {step_number}"
+                    )
+                if phase_tracker._consecutive_no_action >= no_action_limit:
+                    raise ZeroActionAbortError(
+                        f"Model produced no valid actions for {no_action_limit} consecutive steps"
+                    )
+            else:
+                phase_tracker._consecutive_no_action = 0
+
             # Loop detection: push qualified names, emit at most 1 event per step
             step_detection = None
             for action_name in action_names:
@@ -262,10 +299,29 @@ async def run_single_persona(
         logger.info(f"[{persona.id}]   Target URL: {yaml_config.get('target', {}).get('planner_url_clean', 'N/A')}")
         logger.info(f"[{persona.id}]   Waiting for agent to navigate, chat, and interact with widgets...")
 
-        history = await asyncio.wait_for(
-            agent.run(max_steps=max_steps, on_step_end=_build_on_step_end(persona.id, min_step_interval=min_step_interval)),
-            timeout=timeout,
-        )
+        try:
+            history = await asyncio.wait_for(
+                agent.run(max_steps=max_steps, on_step_end=_build_on_step_end(persona.id, min_step_interval=min_step_interval)),
+                timeout=timeout,
+            )
+        except ZeroActionAbortError as e:
+            logger.warning(f"[{persona.id}]   {e} — aborting to try backup models")
+            # Extract partial history from browser-use agent state
+            history = agent.state.history if hasattr(agent, 'state') and hasattr(agent.state, 'history') else None
+            if history is None:
+                # Create a minimal stub so backup chain logic can proceed
+                from types import SimpleNamespace
+                history = SimpleNamespace(
+                    is_done=lambda: True,
+                    has_errors=lambda: False,
+                    model_actions=lambda: [],
+                    errors=lambda: [],
+                    model_thoughts=lambda: [],
+                    extracted_content=lambda: [],
+                    action_names=lambda: [],
+                    urls=lambda: [],
+                    screenshots=lambda: [],
+                )
 
         # --- Capture final page state (result of last action) ---
         final_screenshot_b64 = None
@@ -287,13 +343,16 @@ async def run_single_persona(
         num_actions = len(history.model_actions())
         agent_aborted_early = (
             (not history.is_done() and history.has_errors() and num_actions < min_useful_steps)
-            or (history.is_done() and num_actions < min_useful_steps and num_actions > 0)
+            or (history.is_done() and num_actions < min_useful_steps)
         )
         if agent_aborted_early:
             all_errors = [str(e) for e in history.errors() if e]
             first_error = all_errors[0] if all_errors else ""
             model_kw = ["404", "model", "endpoint", "vision", "image input", "rate limit", "modelprovider", "json_invalid"]
-            is_model_failure = any(kw in first_error.lower() for kw in model_kw)
+            is_model_failure = (
+                any(kw in first_error.lower() for kw in model_kw)
+                or (num_actions == 0 and not first_error)  # model incapable of structured output
+            )
             is_rate_limit = "rate limit" in first_error.lower() or "429" in first_error.lower()
 
             # If rate-limited, cool down before trying backup models

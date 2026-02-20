@@ -1,6 +1,7 @@
 """Factory to create configured browser-use Agent instances."""
 
 import logging
+import os
 from pathlib import Path
 
 from browser_use import Browser, ChatGoogle, ChatGroq, ChatOpenAI
@@ -121,10 +122,10 @@ def create_browser(yaml_config: dict) -> Browser:
     """Create a Browser with configured profile.
 
     WebGL strategy:
-    - Headful: let Chromium auto-detect the native GPU (D3D11 on Windows).
-      Forcing SwiftShader would waste the hardware GPU.
-    - Headless / Docker: Chromium auto-selects SwiftShader. We add
-      --enable-unsafe-swiftshader as a safety net.
+    - Always enable SwiftShader as fallback — on systems with a real GPU,
+      Chromium prefers hardware; SwiftShader only activates when no GPU.
+    - DISABLE_GPU env var (set in Docker/VPS): force software rendering path
+      via ANGLE + SwiftShader. Prevents GPU probe failures on GPU-less machines.
     """
     browser_cfg = yaml_config["browser"]
     headless = browser_cfg.get("headless", False)
@@ -132,9 +133,14 @@ def create_browser(yaml_config: dict) -> Browser:
     args = [
         "--enable-webgl",
         "--ignore-gpu-blocklist",
+        "--enable-unsafe-swiftshader",  # software fallback when no GPU available
     ]
-    if headless:
-        args.append("--enable-unsafe-swiftshader")
+    if os.environ.get("DISABLE_GPU"):
+        args.extend([
+            "--disable-gpu",
+            "--use-gl=angle",
+            "--use-angle=swiftshader-webgl",
+        ])
 
     profile = BrowserProfile(
         headless=headless,

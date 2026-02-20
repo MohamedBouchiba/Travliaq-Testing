@@ -15,6 +15,7 @@ agent:
   max_actions_per_step: 3
   max_failures: 3  # allow recovery from transient UI parsing errors; 429s handled by throttling
   min_useful_steps: 10  # backup chain fires if agent did < 10 steps before failing
+  no_action_limit: 5  # abort + try backup if model produces 0 valid actions for N consecutive steps
   use_vision: auto  # 'auto' = screenshot on demand, 'true' = always, 'false' = never
   step_timeout: 180
 

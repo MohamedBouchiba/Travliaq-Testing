@@ -17,25 +17,25 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Groq (PRIMARY — free, fast, 109B MoE vision)
+    # SambaNova (PRIMARY — free, vision via Maverick, best performer)
+    sambanova_api_key: str = ""
+    sambanova_model: str = "Llama-4-Maverick-17B-128E-Instruct"
+
+    # Groq (SECONDARY — free, fast, 109B MoE vision)
     groq_api_key: str = ""
     groq_model: str = "meta-llama/llama-4-scout-17b-16e-instruct"
 
-    # OpenRouter (SECONDARY — fallback, vision-capable primary)
+    # OpenRouter (TERTIARY — fallback, vision-capable)
     openrouter_api_key: str = ""
-    openrouter_model: str = "nvidia/nemotron-nano-12b-v2-vl:free"  # vision-language model
-    openrouter_paid_model: str = ""  # cheap paid model for higher rate limits
+    openrouter_model: str = "nvidia/nemotron-nano-12b-v2-vl:free"
+    openrouter_paid_model: str = ""  # optional paid model
 
-    # Google Gemini (TERTIARY — free tier has low daily quota)
+    # Google Gemini (QUATERNARY — free tier has low daily quota)
     google_api_key: str = ""
     google_model: str = "gemini-2.5-flash-lite"
     google_fallback_model: str = "gemini-2.5-flash"
 
-    # SambaNova (QUATERNARY — free, vision via Maverick)
-    sambanova_api_key: str = ""
-    sambanova_model: str = "Llama-4-Maverick-17B-128E-Instruct"
-
-    # Cerebras (free, fast inference, OpenAI-compatible)
+    # Cerebras (disabled — llama3.1-8b too small for browser-use)
     cerebras_api_key: str = ""
     cerebras_model: str = "llama3.1-8b"
 
@@ -62,9 +62,11 @@ class Settings(BaseSettings):
     def build_model_chain(self) -> list[str]:
         """Build ordered list of model IDs based on available API keys.
 
-        Priority: Groq > OpenRouter > Google Gemini > SambaNova > OpenRouter backups.
+        Priority: SambaNova > Groq > OpenRouter > Google Gemini > OpenRouter backups.
         """
         chain: list[str] = []
+        if self.sambanova_api_key:
+            chain.append(self.sambanova_model)
         if self.groq_api_key:
             chain.append(self.groq_model)
         if self.openrouter_api_key and self.openrouter_model:
@@ -74,8 +76,6 @@ class Settings(BaseSettings):
         if self.google_api_key:
             chain.append(self.google_model)
             chain.append(self.google_fallback_model)
-        if self.sambanova_api_key:
-            chain.append(self.sambanova_model)
         if self.cerebras_api_key:
             chain.append(self.cerebras_model)
         if self.openrouter_api_key:

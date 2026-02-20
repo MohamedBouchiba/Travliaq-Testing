@@ -37,6 +37,7 @@ class PhaseTracker:
     # Loop detection: recent action names tracked by orchestrator step callback
     _recent_actions: list[str] = field(default_factory=list)
     _stuck_action_count: int = 0  # increments while stuck; re-injects every 5
+    _consecutive_no_action: int = 0  # consecutive steps with zero valid actions
 
     @property
     def feedback_phase_index(self) -> int:
@@ -138,7 +139,23 @@ class TravliaqAgent(Agent):
             should_inject = (pt._stuck_action_count == 1 or pt._stuck_action_count % 5 == 0)
             if should_inject:
                 repeated = pt._recent_actions[-1] if pt._recent_actions else "unknown"
-                if pt._stuck_action_count >= 10:
+                if repeated == "no_action":
+                    # Model generates thoughts but no valid structured actions
+                    if pt.language == "fr":
+                        msg = (
+                            f"⚠️ TU NE PRODUIS AUCUNE ACTION VALIDE depuis {pt._stuck_action_count} étapes. "
+                            f"Tu génères des pensées mais AUCUNE action structurée. "
+                            f"Tu DOIS produire une action comme click_element, input_text, ou go_to_url. "
+                            f"CLIQUE sur le champ de texte du chat en bas à gauche et TAPE ton message."
+                        )
+                    else:
+                        msg = (
+                            f"⚠️ You have produced NO VALID ACTIONS for {pt._stuck_action_count} steps. "
+                            f"You are generating thoughts but NO structured actions. "
+                            f"You MUST produce an action like click_element, input_text, or go_to_url. "
+                            f"CLICK the chat text input at the bottom left and TYPE your message."
+                        )
+                elif pt._stuck_action_count >= 10:
                     # Escalated: tell agent to skip to next phase
                     if pt.language == "fr":
                         msg = (

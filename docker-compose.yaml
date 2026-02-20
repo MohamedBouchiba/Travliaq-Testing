@@ -8,6 +8,7 @@ services:
     # Override headless to true in Docker (no display)
     environment:
       - LOG_LEVEL=INFO
+      - DISABLE_GPU=1
     # Usage:
     #   docker compose run travelia-testing run family_with_kids --headless
     #   docker compose run travelia-testing batch --personas family_with_kids,budget_backpacker --headless

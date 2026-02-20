@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.travliaq_agent import PhaseTracker
-from src.orchestrator import _update_phase_tracker, _build_on_step_end
-from src.agent_factory import _get_provider
+from src.orchestrator import _update_phase_tracker, _build_on_step_end, ZeroActionAbortError
+from src.agent_factory import _get_provider, create_browser
 from src.models import TestRunResult, RunStatus
 
 
@@ -374,7 +374,7 @@ class TestBackupChainTrigger:
         """Reproduce the orchestrator's backup chain trigger logic."""
         return (
             (not is_done and has_errors and num_actions < min_useful_steps)
-            or (is_done and num_actions < min_useful_steps and num_actions > 0)
+            or (is_done and num_actions < min_useful_steps)
         )
 
     def test_triggers_on_zero_actions(self):
@@ -407,10 +407,14 @@ class TestBackupChainTrigger:
             is_done=False, has_errors=True, num_actions=15
         )
 
-    def test_no_trigger_when_done_zero_actions(self):
-        """Agent done + 0 actions → should NOT trigger (handled by error path)."""
-        assert not self._should_trigger_backup(
+    def test_done_zero_actions_triggers_backup(self):
+        """Agent done + 0 actions → should trigger (model incapable of structured output)."""
+        assert self._should_trigger_backup(
             is_done=True, has_errors=True, num_actions=0
+        )
+        # Also triggers without errors (thought-loop: model produces text, no actions)
+        assert self._should_trigger_backup(
+            is_done=True, has_errors=False, num_actions=0
         )
 
     def test_no_trigger_without_errors(self):
@@ -760,3 +764,126 @@ class TestOpenRouterPaidProvider:
         )
         chain = settings.build_model_chain()
         assert "bytedance-seed/seed-1.6-flash" not in chain
+
+
+class TestZeroActionModelFailure:
+    """Tests for 0-action detection as model failure in backup chain."""
+
+    @staticmethod
+    def _is_model_failure(first_error: str, num_actions: int) -> bool:
+        """Reproduce the orchestrator's is_model_failure logic."""
+        model_kw = ["404", "model", "endpoint", "vision", "image input", "rate limit", "modelprovider", "json_invalid"]
+        return (
+            any(kw in first_error.lower() for kw in model_kw)
+            or (num_actions == 0 and not first_error)
+        )
+
+    def test_zero_action_no_error_is_model_failure(self):
+        """0 actions + no error → model incapable of structured output."""
+        assert self._is_model_failure(first_error="", num_actions=0)
+
+    def test_zero_action_with_404_is_model_failure(self):
+        """0 actions + 404 error → standard model failure."""
+        assert self._is_model_failure(first_error="Error code: 404 model not found", num_actions=0)
+
+    def test_nonzero_action_no_error_not_model_failure(self):
+        """5 actions + no error → agent made progress, not a model failure."""
+        assert not self._is_model_failure(first_error="", num_actions=5)
+
+    def test_zero_action_with_unknown_error_not_model_failure(self):
+        """0 actions + unknown error → not treated as model failure."""
+        assert not self._is_model_failure(first_error="connection reset by peer", num_actions=0)
+
+
+class TestConsecutiveNoAction:
+    """Tests for PhaseTracker._consecutive_no_action counter and no_action loop detection."""
+
+    def test_initial_counter_is_zero(self):
+        pt = PhaseTracker(total_phases=9, language="fr")
+        assert pt._consecutive_no_action == 0
+
+    def test_no_action_triggers_stuck_loop(self):
+        """3 consecutive 'no_action' pushes → is_stuck_in_loop = True."""
+        pt = PhaseTracker(total_phases=9, language="fr")
+        for _ in range(3):
+            pt.push_action("no_action")
+        assert pt.is_stuck_in_loop
+        assert pt._recent_actions[-3:] == ["no_action", "no_action", "no_action"]
+
+    def test_real_action_breaks_no_action_loop(self):
+        """A real action after no_action pushes breaks the loop."""
+        pt = PhaseTracker(total_phases=9, language="fr")
+        pt.push_action("no_action")
+        pt.push_action("no_action")
+        pt.push_action("click_element[5]")
+        assert not pt.is_stuck_in_loop
+
+    def test_consecutive_counter_increments_and_resets(self):
+        """_consecutive_no_action tracks manual increment/reset correctly."""
+        pt = PhaseTracker(total_phases=9, language="fr")
+        pt._consecutive_no_action = 3
+        assert pt._consecutive_no_action == 3
+        pt._consecutive_no_action = 0
+        assert pt._consecutive_no_action == 0
+
+    def test_mixed_actions_and_no_actions(self):
+        """Mixed actions: no_action streak resets on real action."""
+        pt = PhaseTracker(total_phases=9, language="fr")
+        pt.push_action("no_action")
+        pt.push_action("no_action")
+        pt.push_action("go_to_url")
+        pt.push_action("no_action")
+        pt.push_action("no_action")
+        pt.push_action("no_action")
+        assert pt.is_stuck_in_loop  # last 3 are no_action
+
+
+class TestZeroActionAbortError:
+    """Tests for ZeroActionAbortError exception."""
+
+    def test_is_exception(self):
+        assert issubclass(ZeroActionAbortError, Exception)
+
+    def test_message(self):
+        err = ZeroActionAbortError("Model produced no valid actions for 5 consecutive steps")
+        assert "5 consecutive steps" in str(err)
+
+
+class TestBrowserArgs:
+    """Tests for create_browser Chrome args (WebGL / SwiftShader)."""
+
+    def test_swiftshader_always_in_args(self):
+        """--enable-unsafe-swiftshader is always present, regardless of headless."""
+        # Headful
+        with patch("src.agent_factory.Browser") as MockBrowser:
+            create_browser({"browser": {"headless": False}})
+            profile = MockBrowser.call_args[1]["browser_profile"]
+            assert "--enable-unsafe-swiftshader" in profile.args
+
+        # Headless
+        with patch("src.agent_factory.Browser") as MockBrowser:
+            create_browser({"browser": {"headless": True}})
+            profile = MockBrowser.call_args[1]["browser_profile"]
+            assert "--enable-unsafe-swiftshader" in profile.args
+
+    def test_disable_gpu_flag_when_env_set(self):
+        """With DISABLE_GPU=1, --disable-gpu and ANGLE flags are added."""
+        with patch("src.agent_factory.Browser") as MockBrowser, \
+             patch.dict("os.environ", {"DISABLE_GPU": "1"}):
+            create_browser({"browser": {"headless": False}})
+            profile = MockBrowser.call_args[1]["browser_profile"]
+            assert "--disable-gpu" in profile.args
+            assert "--use-gl=angle" in profile.args
+            assert "--use-angle=swiftshader-webgl" in profile.args
+
+    def test_no_disable_gpu_without_env(self):
+        """Without DISABLE_GPU env var, no --disable-gpu flag."""
+        import os
+        env_copy = os.environ.copy()
+        env_copy.pop("DISABLE_GPU", None)
+        with patch("src.agent_factory.Browser") as MockBrowser, \
+             patch.dict("os.environ", env_copy, clear=True):
+            create_browser({"browser": {"headless": False}})
+            profile = MockBrowser.call_args[1]["browser_profile"]
+            assert "--disable-gpu" not in profile.args
+            assert "--use-gl=angle" not in profile.args
